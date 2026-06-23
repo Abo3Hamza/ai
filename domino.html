@@ -31,14 +31,7 @@
         // ==========================================
         // 🔴 ضع الـ firebaseConfig الخاص بك هنا 🔴
         // ==========================================
-        const firebaseConfig = {
-  apiKey: "AIzaSyC2OWQXwz5IYfK-BiHGrRgZtV_mts6Li4I",
-  authDomain: "dominogame-ae420.firebaseapp.com",
-  projectId: "dominogame-ae420",
-  storageBucket: "dominogame-ae420.firebasestorage.app",
-  messagingSenderId: "613782966349",
-  appId: "1:613782966349:web:5bee4e74eb08a57cb78c04"
-};
+        const firebaseConfig = { apiKey: "AIzaSyC2OWQXwz5IYfK-BiHGrRgZtV_mts6Li4I", authDomain: "dominogame-ae420.firebaseapp.com", projectId: "dominogame-ae420", storageBucket: "dominogame-ae420.firebasestorage.app", messagingSenderId: "613782966349", appId: "1:613782966349:web:5bee4e74eb08a57cb78c04" };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -51,8 +44,17 @@
         window.firebaseMethods = { signInAnonymously, onAuthStateChanged, doc, setDoc, onSnapshot, updateDoc, getDoc };
     </script>
 
+    <!-- إعداد Babel لاستخدام الـ Classic Runtime لتجنب أخطاء الاستيراد -->
+    <script>
+        Babel.registerPreset('react-classic', {
+            presets: [
+                [Babel.availablePresets['react'], { runtime: 'classic' }]
+            ]
+        });
+    </script>
+
     <!-- كود اللعبة (React) -->
-    <script type="text/babel" data-type="module">
+    <script type="text/babel" data-presets="react-classic" data-type="module">
         const { useState, useEffect, useRef } = React;
         // الأيقونات سيتم تحميلها عبر Lucide لاحقاً، سنستخدم رموز تعبيرية أو نصوص مؤقتاً لتجنب تعقيدات استدعاء المكونات في المتصفح المباشر
 
