@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>بريك آوت (Breakout)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { margin: 0; background-color: #020617; touch-action: none; font-family: system-ui, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        Babel.registerPreset('react-classic', {
+            presets: [
+                [Babel.availablePresets['react'], { runtime: 'classic' }]
+            ]
+        });
+    </script>
+
+    <script type="text/babel" data-presets="react-classic">
+        const { useState, useEffect, useRef } = React;
+
+        // --- SVGs for Icons ---
+        const Play = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+                <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+        );
+        const RotateCcw = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+            </svg>
+        );
+        const Heart = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            </svg>
+        );
+        const ArrowRight = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+        );
+
+        function AdvancedBreakoutGame() {
+          const canvasRef = useRef(null);
+          const containerRef = useRef(null);
+          const [score, setScore] = useState(0);
+          const [lives, setLives] = useState(3);
+          const [level, setLevel] = useState(1);
+          const [gameState, setGameState] = useState('START'); // START, PLAYING, LEVEL_UP, GAMEOVER, WON
+          const paddleXRef = useRef(0);
+
+          useEffect(() => {
+            if (gameState !== 'PLAYING') return;
+
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            let animationFrameId;
+
+            // --- Qindaa'ina Tapha Bu'uuraa ---
+            // Dheerina (hojjaa) dachaadhaan guddisuu akkuma gaafatametti
+            canvas.width = 500;
+            canvas.height = 700;
+
+            // --- Jijjiiramoota Taphaa ---
+            const baseBallSpeed = 4 + (level * 0.5); // Saffisni sadarkaa wajjin dabala
+            let balls = [{ x: canvas.width / 2, y: canvas.height - 40, dx: baseBallSpeed, dy: -baseBallSpeed, radius: 6 }];
+            
+            let paddleHeight = 14;
+            let paddleWidth = 90;
+            let paddleColor = '#6366f1';
+            paddleXRef.current = (canvas.width - paddleWidth) / 2;
+            
+            let powerUps = []; // Tarree kennaawwan kufan kuusuuf
+
+            // --- Qindaa'ina Xuubii fi Sadarkaalee ---
+            const brickWidth = 55;
+            const brickHeight = 22;
+            const brickPadding = 12;
+            const brickOffsetTop = 60;
+            const brickOffsetLeft = 25;
+            const rowColors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+            let bricks = [];
+            
+            // Sadarkaalee/haala xuubii 10 adda addaa ibsuu
+            const generateLevel = (levelNumber) => {
+              const layout = [];
+              const cols = 7;
+              const rows = Math.min(5 + Math.floor(levelNumber / 2), 10);
+              
+              for (let c = 0; c < cols; c++) {
+                layout[c] = [];
+                for (let r = 0; r < rows; r++) {
+                  let status = 1; // 1 jechuun jira, 0 jechuun caccabeera
+                  
+                  // Haala adda addaa akka sadarkaatti
+                  if (levelNumber === 2 && (r + c) % 2 === 0) status = 0; // Haala cheezii
+                  else if (levelNumber === 3 && (c === 0 || c === cols - 1 || r === 0 || r === rows - 1)) status = 0; // Qirxii duwwaa
+                  else if (levelNumber === 4 && r > c && r > (cols - 1 - c)) status = 0; // Piraamidii garagalshaa
+                  else if (levelNumber === 5 && (c === Math.floor(cols/2) || r === Math.floor(rows/2))) status = 0; // Mallattoo idaa'uu duwwaa
+                  else if (levelNumber === 6 && c % 2 !== 0) status = 0; // Utubaawwan
+                  else if (levelNumber === 7 && r % 2 !== 0) status = 0; // Tarreewwan
+                  else if (levelNumber === 8 && (c === r || c === (cols - 1 - r))) status = 0; // Qubee X
+                  else if (levelNumber === 9 && r > 2 && Math.random() > 0.5) status = 0; // Dimshaasha
+                  else if (levelNumber === 10) status = 1; // Dallaa guutuu fi cufaa!
+
+                  layout[c][r] = { x: 0, y: 0, status: status };
+                }
+              }
+              return { layout, rows, cols };
+            };
+
+            const currentLevelData = generateLevel(level);
+            bricks = currentLevelData.layout;
+            const brickRowCount = currentLevelData.rows;
+            const brickColumnCount = currentLevelData.cols;
+
+            // --- Faankishiniiwwan To'annoo (Tuqaa fi Maawsii) ---
+            const updatePaddlePosition = (clientX) => {
+              if (!canvasRef.current) return;
+              const rect = canvasRef.current.getBoundingClientRect();
+              const scaleX = canvas.width / rect.width; 
+              const relativeX = (clientX - rect.left) * scaleX;
+              
+              if (relativeX > 0 && relativeX < canvas.width) {
+                paddleXRef.current = relativeX - paddleWidth / 2;
+                if (paddleXRef.current < 0) paddleXRef.current = 0;
+                if (paddleXRef.current + paddleWidth > canvas.width) paddleXRef.current = canvas.width - paddleWidth;
+              }
+            };
+
+            const mouseMoveHandler = (e) => updatePaddlePosition(e.clientX);
+            const touchMoveHandler = (e) => {
+              if (e.cancelable) e.preventDefault(); 
+              updatePaddlePosition(e.touches[0].clientX);
+            };
+
+            document.addEventListener('mousemove', mouseMoveHandler);
+            const canvasElement = canvasRef.current;
+            canvasElement.addEventListener('touchmove', touchMoveHandler, { passive: false });
+
+            // --- Sirna Kennaa (Power-ups) ---
+            const powerUpTypes = [
+              { type: 'multiball', color: '#ef4444', text: '🔴' },
+              { type: 'expand', color: '#10b981', text: '🟩' },
+              { type: 'shrink', color: '#f59e0b', text: '⚠️' }, // Gufuu!
+              { type: 'slow', color: '#3b82f6', text: '❄️' }
+            ];
+
+            function spawnPowerUp(x, y) {
+              if (Math.random() < 0.25) { // 25% carraa kennaan itti kufu
+                const randomType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+                powerUps.push({
+                  x: x,
+                  y: y,
+                  width: 20,
+                  height: 20,
+                  dy: 2.5, // Saffisa kufiinsa kennaa
+                  ...randomType
+                });
+              }
+            }
+
+            function applyPowerUp(type) {
+              if (type === 'multiball') {
+                // Kubbaa haaraa iddoo kubbaa jalqabaa irraa garuu kofa addaatiin ka'u dabaluu
+                if (balls.length > 0) {
+                   const refBall = balls[0];
+                   balls.push({ x: refBall.x, y: refBall.y, dx: -refBall.dx, dy: refBall.dy - 1, radius: 6 });
+                }
+              } else if (type === 'expand') {
+                paddleWidth = Math.min(paddleWidth + 40, canvas.width - 20); // Dalgee iskiriinii hin darbu
+                paddleColor = '#10b981';
+                setTimeout(() => { paddleWidth = 90; paddleColor = '#6366f1'; }, 10000); // Sekondii 10 booda gara idileetti deebi'a
+              } else if (type === 'shrink') {
+                paddleWidth = Math.max(paddleWidth - 30, 40);
+                paddleColor = '#f59e0b';
+                setTimeout(() => { paddleWidth = 90; paddleColor = '#6366f1'; }, 7000);
+              } else if (type === 'slow') {
+                balls.forEach(b => {
+                   b.dx = b.dx > 0 ? baseBallSpeed * 0.6 : -baseBallSpeed * 0.6;
+                   b.dy = b.dy > 0 ? baseBallSpeed * 0.6 : -baseBallSpeed * 0.6;
+                });
+                setTimeout(() => {
+                   balls.forEach(b => {
+                     b.dx = b.dx > 0 ? baseBallSpeed : -baseBallSpeed;
+                     b.dy = b.dy > 0 ? baseBallSpeed : -baseBallSpeed;
+                   });
+                }, 8000);
+              }
+            }
+
+            // --- Walitti bu'iinsa Bu'uuraa ---
+            function collisionDetection() {
+              let activeBricks = 0;
+              
+              for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                  const b = bricks[c][r];
+                  if (b.status === 1) {
+                    activeBricks++;
+                    
+                    // Kubbaa hunda qorachuu
+                    for (let i = 0; i < balls.length; i++) {
+                        let ball = balls[i];
+                        if (ball.x > b.x && ball.x < b.x + brickWidth && ball.y > b.y && ball.y < b.y + brickHeight) {
+                            ball.dy = -ball.dy;
+                            b.status = 0;
+                            setScore((prev) => prev + (10 * level)); // Qabxiin sadarkaa olaanaatti ni dabala
+                            spawnPowerUp(b.x + brickWidth/2, b.y + brickHeight/2);
+                        }
+                    }
+                  }
+                }
+              }
+
+              if (activeBricks === 0) {
+                if (level >= 10) {
+                    setGameState('WON');
+                } else {
+                    setGameState('LEVEL_UP');
+                }
+              }
+            }
+
+            // --- Faankishiniiwwan Fakkii ---
+            function drawBalls() {
+              balls.forEach(ball => {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffffff';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.closePath();
+              });
+            }
+
+            function drawPaddle() {
+              ctx.beginPath();
+              if (ctx.roundRect) {
+                 ctx.roundRect(paddleXRef.current, canvas.height - paddleHeight - 20, paddleWidth, paddleHeight, 6);
+              } else {
+                 ctx.rect(paddleXRef.current, canvas.height - paddleHeight - 20, paddleWidth, paddleHeight);
+              }
+              ctx.fillStyle = paddleColor;
+              ctx.fill();
+              ctx.closePath();
+            }
+
+            function drawBricks() {
+              for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                  if (bricks[c][r].status === 1) {
+                    const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+                    const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+                    bricks[c][r].x = brickX;
+                    bricks[c][r].y = brickY;
+                    
+                    ctx.beginPath();
+                    if (ctx.roundRect) ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 4);
+                    else ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                    
+                    // Halluu xuubii akka tarreetti, garuu sadarkaa irratti hundaa'uun xiqqoo jijjiirama
+                    const colorIndex = (r + level) % rowColors.length;
+                    ctx.fillStyle = rowColors[colorIndex];
+                    ctx.fill();
+                    
+                    // Calaqqee xuubii irratti bifa 3D salphaaf
+                    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                    ctx.fillRect(brickX, brickY, brickWidth, brickHeight/3);
+                    ctx.closePath();
+                  }
+                }
+              }
+            }
+
+            function drawPowerUps() {
+              powerUps.forEach(p => {
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(p.x - p.width/2, p.y, p.width, p.height, 4);
+                else ctx.rect(p.x - p.width/2, p.y, p.width, p.height);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                ctx.font = "14px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(p.text, p.x, p.y + p.height/2);
+                ctx.closePath();
+              });
+            }
+
+            // --- Marsaa Bu'uuraa (Game Loop) ---
+            function draw() {
+              ctx.clearRect(0, 0, canvas.width, canvas.height); 
+              
+              drawBricks();
+              drawPowerUps();
+              drawBalls();
+              drawPaddle();
+              collisionDetection();
+
+              // Kubbaawwan sochoosuu fi bulchuu
+              for (let i = balls.length - 1; i >= 0; i--) {
+                let ball = balls[i];
+
+                // Qarqara irraa deebi'uu
+                if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
+                  ball.dx = -ball.dx;
+                }
+                if (ball.y + ball.dy < ball.radius) {
+                  ball.dy = -ball.dy;
+                } else if (ball.y + ball.dy > canvas.height - ball.radius - 20 - paddleHeight) {
+                  // Ulee irraa deebi'uu
+                  if (ball.x > paddleXRef.current - 5 && ball.x < paddleXRef.current + paddleWidth + 5) {
+                    const hitPoint = (ball.x - (paddleXRef.current + paddleWidth / 2)) / (paddleWidth / 2);
+                    ball.dx = hitPoint * (baseBallSpeed + 1); 
+                    ball.dy = -Math.abs(ball.dy); // Yeroo hunda ol deebi'uu isaa mirkaneessuu
+                    ball.y = canvas.height - ball.radius - 20 - paddleHeight - 1;
+                  } else if (ball.y + ball.dy > canvas.height) {
+                    // Kubbaan kufeera! Tarree irraa haquu
+                    balls.splice(i, 1);
+                  }
+                }
+                
+                // Iddoo kubbaa haaromsuu
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+              }
+
+              // Yoo kubbaawwan hundi kufan lubbuu dhabuu mirkaneessuu
+              if (balls.length === 0) {
+                if (lives > 1) {
+                    setLives(prev => prev - 1);
+                    // Kubbaa tokko taphaaf deebisuu
+                    balls.push({ x: canvas.width / 2, y: canvas.height - 40, dx: baseBallSpeed, dy: -baseBallSpeed, radius: 6 });
+                    paddleXRef.current = (canvas.width - paddleWidth) / 2;
+                    powerUps = []; // Kennaawwan kufan haquu
+                } else {
+                    setGameState('GAMEOVER');
+                    return;
+                }
+              }
+
+              // Kennaawwan sochoosuu fi bulchuu
+              for (let i = powerUps.length - 1; i >= 0; i--) {
+                let p = powerUps[i];
+                p.y += p.dy;
+
+                // Kennaa uleedhaan qabachuu
+                if (p.y + p.height > canvas.height - 20 - paddleHeight && 
+                    p.y < canvas.height - 20 &&
+                    p.x > paddleXRef.current && 
+                    p.x < paddleXRef.current + paddleWidth) {
+                    
+                    applyPowerUp(p.type);
+                    powerUps.splice(i, 1);
+                } else if (p.y > canvas.height) {
+                    // Kennaan iskiriinii ala kufuu
+                    powerUps.splice(i, 1);
+                }
+              }
+
+              if(gameState === 'PLAYING') {
+                  animationFrameId = requestAnimationFrame(draw);
+              }
+            }
+
+            draw();
+
+            return () => {
+              cancelAnimationFrame(animationFrameId);
+              document.removeEventListener('mousemove', mouseMoveHandler);
+              canvasElement.removeEventListener('touchmove', touchMoveHandler);
+            };
+          }, [gameState, level, lives]);
+
+          // --- Faankishiniiwwan Haala Taphaa To'achuu ---
+          const startGame = () => {
+            setScore(0);
+            setLives(3);
+            setLevel(1);
+            setGameState('PLAYING');
+          };
+
+          const nextLevel = () => {
+            setLevel(prev => prev + 1);
+            setGameState('PLAYING');
+          };
+
+          const renderHearts = () => {
+            const hearts = [];
+            for(let i=0; i<3; i++) {
+                hearts.push(
+                    <Heart 
+                        key={i} 
+                        className={`w-5 h-5 ${i < lives ? 'fill-rose-500 text-rose-500' : 'fill-transparent text-slate-600'}`} 
+                    />
+                )
+            }
+            return hearts;
+          }
+
+          return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white font-sans p-2 sm:p-4 touch-none" dir="rtl" ref={containerRef}>
+              
+              <div className="w-full max-w-[500px] flex justify-between items-center mb-4 px-2 font-mono">
+                <div className="flex flex-col gap-1">
+                    <span className="text-slate-400 text-xs">المستوى</span>
+                    <span className="text-xl font-bold text-indigo-400">{level} / 10</span>
+                </div>
+                
+                <div className="flex flex-col items-center gap-1">
+                    <span className="text-slate-400 text-xs">النقاط</span>
+                    <span className="text-2xl font-black text-emerald-400">{score}</span>
+                </div>
+
+                <div className="flex flex-col gap-1 items-end">
+                    <span className="text-slate-400 text-xs">الحياة</span>
+                    <div className="flex gap-1">
+                        {renderHearts()}
+                    </div>
+                </div>
+              </div>
+
+              <div className="relative border-4 border-slate-800 bg-slate-900/40 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden w-full max-w-[500px]">
+                
+                <canvas 
+                  ref={canvasRef} 
+                  width="500" 
+                  height="700"
+                  className="w-full h-[65vh] sm:h-[700px] block touch-none object-contain"
+                  style={{ touchAction: 'none' }} 
+                />
+
+                {gameState !== 'PLAYING' && (
+                  <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300 z-10">
+                    
+                    {gameState === 'START' && (
+                      <React.Fragment>
+                        <div className="w-20 h-20 bg-indigo-600/20 text-indigo-400 rounded-full flex items-center justify-center mb-6 border border-indigo-500/30">
+                          <Play className="w-10 h-10 fill-current translate-x-1" />
+                        </div>
+                        <h1 className="text-3xl font-black mb-2 bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">بريك آوت</h1>
+                        <p className="text-slate-400 mb-8 max-w-xs leading-relaxed">
+                          10 مستويات مثيرة، التقط الهدايا (🔴 🟩) وتجنب الفخاخ (⚠️). المس واسحب لتحريك المضرب.
+                        </p>
+                        <button 
+                          onClick={startGame}
+                          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg px-10 py-4 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(79,70,229,0.4)] w-full max-w-[250px]"
+                        >
+                          العب الآن
+                        </button>
+                      </React.Fragment>
+                    )}
+
+                    {gameState === 'LEVEL_UP' && (
+                      <React.Fragment>
+                        <h2 className="text-4xl font-black text-cyan-400 tracking-wide mb-2 animate-pulse">مستوى رائع!</h2>
+                        <p className="text-slate-300 mb-8 text-lg">استعد لتحدي أصعب في المستوى {level + 1}</p>
+                        <button 
+                          onClick={nextLevel}
+                          className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-lg px-8 py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 w-full max-w-[250px]"
+                        >
+                          التالي
+                          <ArrowRight className="w-6 h-6 ml-2" />
+                        </button>
+                      </React.Fragment>
+                    )}
+
+                    {gameState === 'GAMEOVER' && (
+                      <React.Fragment>
+                        <h2 className="text-5xl font-black text-rose-500 tracking-wider mb-2">خسارة</h2>
+                        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl my-6 w-full max-w-[250px]">
+                            <p className="text-slate-400 text-sm mb-1">النقاط النهائية</p>
+                            <p className="text-white font-mono text-3xl font-bold">{score}</p>
+                            <p className="text-slate-500 text-xs mt-2">وصلت للمستوى: {level}</p>
+                        </div>
+                        <button 
+                          onClick={startGame}
+                          className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-lg px-8 py-4 rounded-xl flex items-center justify-center gap-3 border border-slate-700 transition-all active:scale-95 w-full max-w-[250px]"
+                        >
+                          <RotateCcw className="w-6 h-6 mr-2" />
+                          إعادة اللعب
+                        </button>
+                      </React.Fragment>
+                    )}
+
+                    {gameState === 'WON' && (
+                      <React.Fragment>
+                        <h2 className="text-5xl font-black text-emerald-400 tracking-wide mb-2">بطل! 🎉</h2>
+                        <p className="text-slate-300 mb-6 text-lg">لقد أنهيت الـ 10 مستويات بالكامل!</p>
+                        <div className="bg-emerald-950/30 border border-emerald-900 p-4 rounded-xl mb-8 w-full max-w-[250px]">
+                            <p className="text-emerald-500/70 text-sm mb-1">النقاط النهائية</p>
+                            <p className="text-emerald-400 font-mono text-4xl font-black">{score}</p>
+                        </div>
+                        <button 
+                          onClick={startGame}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg px-10 py-4 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.4)] w-full max-w-[250px]"
+                        >
+                          العب من جديد
+                        </button>
+                      </React.Fragment>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AdvancedBreakoutGame />);
+    </script>
+</body>
+</html>
