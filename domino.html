@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة دومينو لايف</title>
+    <!-- استدعاء Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- استدعاء React و ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- استدعاء Babel لترجمة كود React -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- استدعاء أيقونات Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background-color: #0f172a; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- استدعاء مكتبات Firebase كـ Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // ==========================================
+        // 🔴 ضع الـ firebaseConfig الخاص بك هنا 🔴
+        // ==========================================
+        const firebaseConfig = {
+  apiKey: "AIzaSyC2OWQXwz5IYfK-BiHGrRgZtV_mts6Li4I",
+  authDomain: "dominogame-ae420.firebaseapp.com",
+  projectId: "dominogame-ae420",
+  storageBucket: "dominogame-ae420.firebasestorage.app",
+  messagingSenderId: "613782966349",
+  appId: "1:613782966349:web:5bee4e74eb08a57cb78c04"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // جعل متغيرات Firebase متاحة للـ React
+        window.firebaseApp = app;
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.firebaseMethods = { signInAnonymously, onAuthStateChanged, doc, setDoc, onSnapshot, updateDoc, getDoc };
+    </script>
+
+    <!-- كود اللعبة (React) -->
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useRef } = React;
+        // الأيقونات سيتم تحميلها عبر Lucide لاحقاً، سنستخدم رموز تعبيرية أو نصوص مؤقتاً لتجنب تعقيدات استدعاء المكونات في المتصفح المباشر
+
+        // --- قوانين وتجهيز الدومينو ---
+        const ALL_BONES = [];
+        for (let i = 0; i <= 6; i++) {
+          for (let j = i; j <= 6; j++) {
+            ALL_BONES.push({ l: i, r: j, id: `${i}-${j}` });
+          }
+        }
+
+        const shuffle = (array) => {
+          let currentIndex = array.length, randomIndex;
+          while (currentIndex !== 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+          }
+          return array;
+        };
+
+        const createInitialGameState = (p1Id, p2Id = 'bot') => {
+          const shuffled = shuffle([...ALL_BONES]);
+          return {
+            board: [],
+            p1: { id: p1Id, hand: shuffled.slice(0, 7), score: 0 },
+            p2: { id: p2Id, hand: shuffled.slice(7, 14), score: 0 },
+            boneyard: shuffled.slice(14),
+            turn: 'p1',
+            status: p2Id === 'bot' ? 'playing' : 'waiting', 
+            winner: null,
+            ends: { left: null, right: null },
+            lastAction: 'تم توزيع الأوراق، ابدأ اللعب!'
+          };
+        };
+
+        // --- المكونات الرسومية ---
+        const Dot = ({ show }) => (
+          <div className={`w-2 h-2 rounded-full ${show ? 'bg-slate-900' : 'bg-transparent'}`}></div>
+        );
+
+        const DominoHalf = ({ value }) => {
+          const dots = {
+            0: [0,0,0,0,0,0,0,0,0], 1: [0,0,0,0,1,0,0,0,0], 2: [1,0,0,0,0,0,0,0,1],
+            3: [1,0,0,0,1,0,0,0,1], 4: [1,0,1,0,0,0,1,0,1], 5: [1,0,1,0,1,0,1,0,1],
+            6: [1,0,1,1,0,1,1,0,1]
+          }[value] || [0,0,0,0,0,0,0,0,0];
+          return (
+            <div className="grid grid-cols-3 grid-rows-3 gap-0.5 p-1 w-[36px] h-[36px] items-center justify-items-center">
+              {dots.map((show, i) => <Dot key={i} show={show} />)}
+            </div>
+          );
+        };
+
+        const DominoPiece = ({ piece, onClick, isBoard = false, highlight = false }) => {
+          const isDouble = piece.l === piece.r;
+          let layoutClass = isBoard && !isDouble ? "flex-row w-[80px] h-[40px]" : "flex-col w-[40px] h-[80px]"; 
+          return (
+            <div onClick={onClick} className={`flex bg-amber-50 rounded-lg border-2 shadow-sm ${highlight ? 'border-indigo-500 ring-4 ring-indigo-500/30 -translate-y-2' : 'border-slate-400/70'} transition-all cursor-pointer shrink-0 ${layoutClass}`}>
+              <DominoHalf value={piece.l} />
+              <div className={`bg-slate-400/50 ${isBoard && !isDouble ? 'w-0.5 h-full' : 'h-0.5 w-full'}`}></div>
+              <DominoHalf value={piece.r} />
+            </div>
+          );
+        };
+
+        function DominoGame() {
+          const [user, setUser] = useState(null);
+          const [mode, setMode] = useState('menu'); 
+          const [roomCode, setRoomCode] = useState('');
+          const [joinCode, setJoinCode] = useState('');
+          const [gameState, setGameState] = useState(null);
+          const [playerRole, setPlayerRole] = useState(null); 
+          const [error, setError] = useState('');
+          const [pendingPlay, setPendingPlay] = useState(null);
+          const boardRef = useRef(null);
+
+          // التأكد من تحميل Firebase
+          const db = window.firebaseDb;
+          const auth = window.firebaseAuth;
+          const { signInAnonymously, onAuthStateChanged, doc, setDoc, onSnapshot, updateDoc, getDoc } = window.firebaseMethods || {};
+
+          useEffect(() => {
+            if (auth && signInAnonymously) {
+               signInAnonymously(auth).catch(e => console.error(e));
+               return onAuthStateChanged(auth, setUser);
+            }
+          }, [auth]);
+
+          useEffect(() => {
+            if (boardRef.current && gameState?.board?.length > 0) {
+              boardRef.current.scrollLeft = boardRef.current.scrollWidth / 2 - boardRef.current.clientWidth / 2;
+            }
+          }, [gameState?.board?.length]);
+
+          useEffect(() => {
+            if (mode === 'local' && gameState?.status === 'playing' && gameState.turn === 'p2') {
+              const timer = setTimeout(botTurn, 900);
+              return () => clearTimeout(timer);
+            }
+          }, [gameState]);
+
+          const updateState = async (newState) => {
+            if (mode === 'local') setGameState(newState);
+            else if (mode === 'online' && roomCode && db) {
+              try {
+                await updateDoc(doc(db, 'domino_rooms', roomCode), { gameState: newState });
+              } catch (err) { console.error(err); }
+            }
+          };
+
+          const getValidMoves = (hand, ends) => {
+            if (ends.left === null && ends.right === null) return hand.map(h => ({ piece: h, side: 'both' }));
+            let moves = [];
+            hand.forEach(p => {
+              let canLeft = p.l === ends.left || p.r === ends.left;
+              let canRight = p.l === ends.right || p.r === ends.right;
+              if (canLeft && canRight) moves.push({ piece: p, side: 'both' });
+              else if (canLeft) moves.push({ piece: p, side: 'left' });
+              else if (canRight) moves.push({ piece: p, side: 'right' });
+            });
+            return moves;
+          };
+
+          const calculateWinner = (state) => {
+            if (state.p1.hand.length === 0) return { winner: 'p1', msg: 'اللاعب الأول فاز!' };
+            if (state.p2.hand.length === 0) return { winner: 'p2', msg: mode === 'local' ? 'الكمبيوتر فاز!' : 'اللاعب الثاني فاز!' };
+            const p1Valid = getValidMoves(state.p1.hand, state.ends).length > 0;
+            const p2Valid = getValidMoves(state.p2.hand, state.ends).length > 0;
+            if (!p1Valid && !p2Valid && state.boneyard.length === 0) {
+              const p1Sum = state.p1.hand.reduce((s, p) => s + p.l + p.r, 0);
+              const p2Sum = state.p2.hand.reduce((s, p) => s + p.l + p.r, 0);
+              if (p1Sum < p2Sum) return { winner: 'p1', msg: `قفلة! فوز اللاعب 1 (${p1Sum} ضد ${p2Sum})` };
+              if (p2Sum < p1Sum) return { winner: 'p2', msg: `قفلة! فوز اللاعب 2 (${p2Sum} ضد ${p1Sum})` };
+              return { winner: 'draw', msg: 'تعادل في القفلة!' };
+            }
+            return null;
+          };
+
+          const handlePlayPiece = (piece, sideChoice, currentState = gameState, forceTurn = null) => {
+            let newState = JSON.parse(JSON.stringify(currentState));
+            const activePlayer = forceTurn || newState.turn;
+            newState[activePlayer].hand = newState[activePlayer].hand.filter(p => p.id !== piece.id);
+            let playedPiece = { ...piece };
+
+            if (newState.board.length === 0) {
+              newState.ends = { left: piece.l, right: piece.r };
+              newState.board.push(playedPiece);
+              newState.lastAction = `بدأ بـ [${piece.l}-${piece.r}]`;
+            } else {
+              if (sideChoice === 'left') {
+                playedPiece = piece.r === newState.ends.left ? { l: piece.l, r: piece.r } : { l: piece.r, r: piece.l };
+                newState.ends.left = playedPiece.l;
+                newState.board.unshift(playedPiece);
+              } else {
+                playedPiece = piece.l === newState.ends.right ? { l: piece.l, r: piece.r } : { l: piece.r, r: piece.l };
+                newState.ends.right = playedPiece.r;
+                newState.board.push(playedPiece);
+              }
+              newState.lastAction = `تم لعب [${piece.l}-${piece.r}]`;
+            }
+
+            const winCheck = calculateWinner(newState);
+            if (winCheck) { newState.status = 'finished'; newState.winner = winCheck.winner; newState.lastAction = winCheck.msg; }
+            else newState.turn = activePlayer === 'p1' ? 'p2' : 'p1';
+            
+            updateState(newState);
+            setPendingPlay(null);
+          };
+
+          const handleDraw = () => {
+            let newState = JSON.parse(JSON.stringify(gameState));
+            if (newState.boneyard.length === 0) {
+              newState.turn = newState.turn === 'p1' ? 'p2' : 'p1';
+              newState.lastAction = 'تخطى الدور لعدم وجود أوراق';
+              const winCheck = calculateWinner(newState);
+              if(winCheck) { newState.status = 'finished'; newState.winner = winCheck.winner; newState.lastAction = winCheck.msg; }
+            } else {
+              newState[newState.turn].hand.push(newState.boneyard.pop());
+              newState.lastAction = `سحب قطعة جديدة`;
+            }
+            updateState(newState);
+          };
+
+          const botTurn = () => {
+            const validMoves = getValidMoves(gameState.p2.hand, gameState.ends);
+            if (validMoves.length > 0) {
+              validMoves.sort((a, b) => (b.piece.l + b.piece.r) - (a.piece.l + a.piece.r));
+              const move = validMoves[0];
+              handlePlayPiece(move.piece, move.side === 'both' ? 'left' : move.side, gameState, 'p2');
+            } else handleDraw();
+          };
+
+          const onPieceClick = (piece) => {
+            if (gameState.status !== 'playing' || gameState.turn !== playerRole) return;
+            const validMoves = getValidMoves([piece], gameState.ends);
+            if (validMoves.length === 0) { setError('لا تطابق أرقام الطاولة!'); setTimeout(() => setError(''), 2000); return; }
+            if (validMoves[0].side === 'both') setPendingPlay(piece);
+            else handlePlayPiece(piece, validMoves[0].side);
+          };
+
+          // --- الأونلاين المباشر في قاعدة بياناتك ---
+          const createRoom = async () => {
+            if (!user || !db) return setError("جاري الاتصال بقاعدة البيانات...");
+            const code = Math.floor(1000 + Math.random() * 9000).toString();
+            try {
+              await setDoc(doc(db, 'domino_rooms', code), { createdAt: new Date(), gameState: createInitialGameState(user.uid, null) });
+              setRoomCode(code); setPlayerRole('p1'); setMode('online');
+              onSnapshot(doc(db, 'domino_rooms', code), snap => snap.exists() && setGameState(snap.data().gameState));
+            } catch (err) { setError("فشل إنشاء الغرفة"); console.error(err); }
+          };
+
+          const joinRoom = async () => {
+            if (!user || !joinCode || !db) return;
+            try {
+              const roomRef = doc(db, 'domino_rooms', joinCode);
+              const snap = await getDoc(roomRef);
+              if (!snap.exists()) return setError("الغرفة غير موجودة!");
+              
+              let newState = { ...snap.data().gameState };
+              if (newState.status === 'waiting' && newState.p1.id !== user.uid) {
+                newState.status = 'playing'; newState.p2.id = user.uid;
+                await updateDoc(roomRef, { gameState: newState });
+                setPlayerRole('p2');
+              } else if (newState.p1.id === user.uid) setPlayerRole('p1');
+              else if (newState.p2?.id === user.uid) setPlayerRole('p2');
+              else return setError("الغرفة ممتلئة!");
+
+              setRoomCode(joinCode); setMode('online');
+              onSnapshot(roomRef, snap => snap.exists() && setGameState(snap.data().gameState));
+            } catch (err) { setError("خطأ في الانضمام"); console.error(err); }
+          };
+
+          // --- الواجهات الرسومية ---
+          if (mode === 'menu') return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-white" dir="rtl">
+              <div className="w-full max-w-md bg-slate-900 rounded-3xl p-8 text-center border border-slate-800">
+                <h1 className="text-3xl font-black mb-8 text-yellow-500">دومينو لايف</h1>
+                <button onClick={() => { setMode('local'); setPlayerRole('p1'); setGameState(createInitialGameState('p1', 'bot')); }} className="w-full bg-slate-800 py-4 mb-4 rounded-xl font-bold flex justify-center gap-2">
+                   ضد الكمبيوتر 🤖
+                </button>
+                <button onClick={() => setMode('online_setup')} className="w-full bg-indigo-600 py-4 rounded-xl font-bold flex justify-center gap-2">
+                   لعب أونلاين 👥
+                </button>
+              </div>
+            </div>
+          );
+
+          if (mode === 'online_setup') return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-white" dir="rtl">
+              <div className="w-full max-w-md bg-slate-900 rounded-3xl p-8 relative border border-slate-800 text-center">
+                <button onClick={() => setMode('menu')} className="absolute top-5 right-5">رجوع ➡️</button>
+                <h2 className="text-xl font-bold mb-6 mt-4">اللعب المشترك</h2>
+                <button onClick={createRoom} className="w-full bg-indigo-600 py-3 rounded-xl font-bold mb-6">إنشاء غرفة</button>
+                <input type="number" placeholder="أدخل الكود (4 أرقام)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} className="w-full bg-slate-950 border border-slate-700 py-3 text-center mb-3 rounded-xl text-yellow-400" />
+                <button onClick={joinRoom} className="w-full bg-emerald-600 py-3 rounded-xl font-bold">انضمام</button>
+                {error && <p className="text-rose-400 mt-4 text-sm">{error}</p>}
+              </div>
+            </div>
+          );
+
+          if (!gameState) return <div className="min-h-screen bg-slate-950 text-white flex justify-center items-center">جاري التحميل...</div>;
+          const isMyTurn = gameState.status === 'playing' && gameState.turn === playerRole;
+
+          return (
+            <div className="min-h-screen bg-[#143222] flex flex-col text-white select-none overflow-hidden" dir="rtl">
+              <div className="bg-black/50 p-4 flex justify-between items-center z-20">
+                <button onClick={() => setMode('menu')} className="bg-white/10 px-3 py-1 rounded">خروج</button>
+                <div className="text-xs text-yellow-400 font-bold">{mode === 'online' ? `غرفة: ${roomCode}` : 'أوفلاين'}</div>
+                <div className="text-xs text-slate-300">خصم: <span className="font-bold text-white ml-1">{gameState[playerRole === 'p1' ? 'p2' : 'p1']?.hand.length || 0}</span></div>
+              </div>
+              
+              {error && <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-rose-600 px-4 py-2 rounded-xl z-50 text-xs font-bold">{error}</div>}
+
+              <div className="flex-1 relative flex items-center justify-center p-2 overflow-hidden">
+                <button onClick={handleDraw} disabled={!isMyTurn || gameState.boneyard.length===0} className="absolute top-4 right-4 bg-black/50 p-3 rounded-xl disabled:opacity-40 text-xs z-20">
+                  سحب ({gameState.boneyard.length})
+                </button>
+                <div className="absolute top-4 left-4 bg-black/40 text-[11px] px-3 py-1 rounded-full z-20">{gameState.lastAction}</div>
+                
+                <div ref={boardRef} className="w-full h-full overflow-x-auto py-24 px-[50vw] flex items-center scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+                  {gameState.board.length === 0 ? <div className="text-white/30 text-lg w-full text-center">العب أول قطعة</div> :
+                    <div className="flex items-center gap-1.5">{gameState.board.map((p, i) => <DominoPiece key={i} piece={p} isBoard={true} />)}</div>
+                  }
+                </div>
+              </div>
+
+              <div className="bg-black/70 p-4 pb-8 z-30 relative">
+                {pendingPlay && (
+                  <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900 p-2 rounded-xl flex gap-2 border border-slate-700">
+                    <button onClick={() => handlePlayPiece(pendingPlay, 'right')} className="bg-indigo-600 px-3 py-1.5 rounded text-xs">يمين ({gameState.ends.right})</button>
+                    <button onClick={() => handlePlayPiece(pendingPlay, 'left')} className="bg-emerald-600 px-3 py-1.5 rounded text-xs">يسار ({gameState.ends.left})</button>
+                    <button onClick={() => setPendingPlay(null)} className="bg-slate-700 px-3 py-1.5 rounded text-xs">إلغاء</button>
+                  </div>
+                )}
+                <div className="flex justify-center items-end gap-2 overflow-x-auto scrollbar-none">
+                  {gameState[playerRole]?.hand.map(p => (
+                    <div key={p.id} className={!isMyTurn ? 'opacity-50' : ''}>
+                      <DominoPiece piece={p} onClick={() => onPieceClick(p)} highlight={isMyTurn && getValidMoves([p], gameState.ends).length > 0} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {gameState.status === 'finished' && (
+                <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-50 p-6 text-center">
+                  <h2 className="text-3xl font-black mb-4">انتهت الجولة!</h2>
+                  <p className="text-yellow-400 mb-8">{gameState.lastAction}</p>
+                  <button onClick={() => { const s = createInitialGameState(gameState.p1.id, gameState.p2.id); s.status='playing'; updateState(s); }} className="bg-emerald-600 py-3 px-8 rounded-xl font-bold mb-3">لعب مجدداً</button>
+                  <button onClick={() => setMode('menu')} className="bg-slate-800 py-3 px-8 rounded-xl font-bold">الخروج</button>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<DominoGame />);
+    </script>
+</body>
+</html>
