@@ -1,7 +1,7 @@
 const CACHE_NAME = 'Gomoku-cache-v2'; // Increment cache version
 const urlsToCache = [
   './',             // Cache the root directory
-  './Gomoku.html',   // Assuming the main HTML file is Gomoku.html (or change to index.html if renamed)
+  './index.html',   // Assuming the main HTML file is Gomoku.html (or change to index.html if renamed)
   './manifest.json',
   './icons/icon-192x192.png',
   './icons/icon-512x512.png'
