@@ -1,4 +1,4 @@
-const CACHE_NAME = 'Gomoku-cache-v2'; // Increment cache version
+const CACHE_NAME = 'Gomoku-cache-v3'; // Increment cache version
 const urlsToCache = [
   './',             // Cache the root directory
   './index.html',   // Assuming the main HTML file is Gomoku.html (or change to index.html if renamed)
