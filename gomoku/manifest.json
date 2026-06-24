@@ -2,7 +2,7 @@
   "name": "Gomoku game",
   "short_name": "Gomoku",
   "description": "لعبه جوموكو تشبه اكس او ولكن الفائز من يحمع 5 مربعات جانب بعض",
-  "start_url": "./Gomoku.html",
+  "start_url": "./index.html",
   "id": "/gomoku-app/", 
   "scope": ".",
   "display": "standalone",
