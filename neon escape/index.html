@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Neon Escape</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        user-select: none;
+      }
+
+      body {
+        overflow: hidden;
+        touch-action: none;
+        background: #020617;
+        font-family: Arial, sans-serif;
+        color: white;
+      }
+
+      canvas {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(circle at center, #111827, #020617 70%);
+      }
+
+      #ui {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 22px;
+        z-index: 5;
+        text-shadow: 0 0 10px #00ffff;
+      }
+
+      #dashBtn {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        font-size: 35px;
+        background: #06b6d4;
+        z-index: 20;
+      }
+
+      #power {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        font-size: 22px;
+        color: #22d3ee;
+      }
+
+      #deviceMode {
+        margin-bottom: 25px;
+        padding: 10px 25px;
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid #00ffff;
+        color: #00ffff;
+        font-size: 22px;
+        box-shadow: 0 0 20px #00ffff;
+      }
+
+      .panel {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(8px);
+        z-index: 10;
+      }
+
+      h1 {
+        font-size: 70px;
+        color: #00ffff;
+        text-shadow:
+          0 0 10px #00ffff,
+          0 0 30px #0088ff;
+        margin-bottom: 30px;
+      }
+
+      button {
+        padding: 15px 50px;
+        border: none;
+        border-radius: 50px;
+        font-size: 25px;
+        cursor: pointer;
+        color: white;
+        background: #06b6d4;
+        box-shadow: 0 0 20px #06b6d4;
+        transition: 0.3s;
+      }
+
+      button:hover {
+        transform: scale(1.1);
+        background: #22d3ee;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .score {
+        color: #22d3ee;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="ui">
+      <div>
+        SCORE:
+        <span id="score" class="score">0</span>
+      </div>
+
+      <div>
+        BEST:
+        <span id="best">0</span>
+      </div>
+    </div>
+
+    <button id="dashBtn">⚡</button>
+
+    <div id="power"></div>
+
+    <div id="start" class="panel">
+      <h1>NEON ESCAPE</h1>
+      <div id="deviceMode"></div>
+
+      <button onclick="startGame()">START GAME</button>
+    </div>
+
+    <div id="over" class="panel hidden">
+      <h1>GAME OVER</h1>
+
+      <h2 id="finalScore"></h2>
+
+      <br />
+
+      <button onclick="startGame()">RESTART</button>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      let deviceMode = isMobile ? "📱 MOBILE MODE" : "🖥️ DESKTOP MODE";
+      document.getElementById("dashBtn").style.display = isMobile
+        ? "block"
+        : "none";
+      document.getElementById("deviceMode").innerHTML = deviceMode;
+
+      function resize() {
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+      }
+
+      resize();
+      window.onresize = resize;
+
+      let game = false;
+
+      let score = 0;
+
+      let best = localStorage.getItem("neonBest") || 0;
+
+      document.getElementById("best").innerHTML = best;
+
+      // اللاعب
+
+      let player = {
+        x: 0,
+        y: 0,
+        size: isMobile ? 12 : 15,
+        speed: isMobile ? 5 : 7,
+        color: "#00ffff",
+      };
+
+      // التحكم
+
+      let keys = {};
+
+      addEventListener("keydown", (e) => {
+        keys[e.key] = true;
+
+        if (e.code === "Space") {
+          dash();
+        }
+      });
+
+      document.getElementById("dashBtn").addEventListener("touchstart", () => {
+        dash();
+      });
+
+      function dash() {
+        if (dashCooldown > 0) return;
+
+        let dx = 0;
+        let dy = 0;
+
+        if (keys["ArrowUp"] || keys["w"]) dy = -1;
+
+        if (keys["ArrowDown"] || keys["s"]) dy = 1;
+
+        if (keys["ArrowLeft"] || keys["a"]) dx = -1;
+
+        if (keys["ArrowRight"] || keys["d"]) dx = 1;
+
+        if (dx === 0 && dy === 0) return;
+
+        player.x += dx * 120;
+        player.y += dy * 120;
+
+        player.x = Math.max(0, Math.min(canvas.width, player.x));
+
+        player.y = Math.max(0, Math.min(canvas.height, player.y));
+
+        dashCooldown = 120;
+
+        sound(700, 0.1, "square");
+
+        for (let i = 0; i < 20; i++) {
+          particles.push({
+            x: player.x,
+
+            y: player.y,
+
+            size: 4,
+
+            speedX: (Math.random() - 0.5) * 8,
+
+            speedY: (Math.random() - 0.5) * 8,
+
+            life: 1,
+
+            color: "#00ffff",
+          });
+        }
+      }
+
+      addEventListener("keyup", (e) => {
+        keys[e.key] = false;
+      });
+
+      // نجوم الخلفية
+
+      let stars = [];
+
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: Math.random() * innerWidth,
+
+          y: Math.random() * innerHeight,
+
+          size: Math.random() * 2,
+
+          speed: Math.random() * 2 + 0.5,
+        });
+      }
+
+      function drawStars() {
+        ctx.fillStyle = "white";
+
+        stars.forEach((s) => {
+          ctx.beginPath();
+
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+
+          ctx.fill();
+
+          s.y += s.speed;
+
+          if (s.y > canvas.height) {
+            s.y = 0;
+            s.x = Math.random() * canvas.width;
+          }
+        });
+      }
+
+      function startGame() {
+        document.getElementById("start").classList.add("hidden");
+
+        document.getElementById("over").classList.add("hidden");
+
+        score = 0;
+
+        level = 1;
+
+        enemies = [];
+
+        particles = [];
+
+        trail = [];
+
+        spawnTimer = 0;
+
+        player.x = canvas.width / 2;
+
+        player.y = canvas.height / 2;
+
+        // سرعة اللاعب ثابتة
+
+        player.speed = 7;
+
+        game = true;
+
+        loop();
+      }
+
+      // ================================
+      // الجزء الثاني
+      // حركة اللاعب + النيون + العقبات
+      // ================================
+
+      // أثر اللاعب
+
+      let trail = [];
+
+      function movePlayer() {
+        if (keys["ArrowUp"] || keys["w"]) {
+          player.y -= player.speed;
+        }
+
+        if (keys["ArrowDown"] || keys["s"]) {
+          player.y += player.speed;
+        }
+
+        if (keys["ArrowLeft"] || keys["a"]) {
+          player.x -= player.speed;
+        }
+
+        if (keys["ArrowRight"] || keys["d"]) {
+          player.x += player.speed;
+        }
+
+        // حدود الشاشة
+
+        if (player.x < 0) player.x = 0;
+
+        if (player.x > canvas.width) player.x = canvas.width;
+
+        if (player.y < 0) player.y = 0;
+
+        if (player.y > canvas.height) player.y = canvas.height;
+
+        // إضافة أثر
+
+        trail.push({
+          x: player.x,
+          y: player.y,
+          alpha: 1,
+        });
+
+        if (trail.length > 25) trail.shift();
+      }
+
+      function drawPlayer() {
+        // الأثر
+
+        trail.forEach((t, i) => {
+          ctx.beginPath();
+
+          ctx.fillStyle = `rgba(0,255,255,${t.alpha})`;
+
+          ctx.arc(t.x, t.y, player.size * (i / 25), 0, Math.PI * 2);
+
+          ctx.fill();
+
+          t.alpha -= 0.03;
+        });
+
+        // Glow
+
+        ctx.shadowBlur = 30;
+
+        ctx.shadowColor = "#00ffff";
+
+        ctx.beginPath();
+
+        ctx.fillStyle = "#00ffff";
+
+        ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+      }
+
+      // ================================
+      // العقبات
+      // ================================
+
+      let enemies = [];
+
+      function createEnemy() {
+        let side = Math.floor(Math.random() * 4);
+
+        let e = {
+          size: isMobile ? Math.random() * 15 + 12 : Math.random() * 20 + 15,
+
+          speed: Math.random() * 0.8 + 0.8 + level * 0.08,
+
+          color: "#ff0055",
+        };
+
+        if (side === 0) {
+          e.x = Math.random() * canvas.width;
+          e.y = -50;
+        }
+
+        if (side === 1) {
+          e.x = canvas.width + 50;
+          e.y = Math.random() * canvas.height;
+        }
+
+        if (side === 2) {
+          e.x = Math.random() * canvas.width;
+          e.y = canvas.height + 50;
+        }
+
+        if (side === 3) {
+          e.x = -50;
+          e.y = Math.random() * canvas.height;
+        }
+
+        enemies.push(e);
+      }
+
+      let spawnTimer = 0;
+
+      function updateEnemies() {
+        spawnTimer++;
+
+        let spawnRate = Math.max(18, 120 - level * 8);
+        if (spawnTimer > spawnRate) {
+          createEnemy();
+
+          spawnTimer = 0;
+        }
+
+        enemies.forEach((e) => {
+          let dx = player.x - e.x;
+
+          let dy = player.y - e.y;
+
+          let dist = Math.sqrt(dx * dx + dy * dy);
+
+          let chase = e.speed * 0.7;
+
+          if (slowTime > 0) {
+            chase *= 0.35;
+          }
+
+          e.x += (dx / dist) * chase;
+
+          e.y += (dy / dist) * chase;
+        });
+      }
+
+      function drawEnemies() {
+        enemies.forEach((e) => {
+          ctx.shadowBlur = 25;
+
+          ctx.shadowColor = "#ff0055";
+
+          ctx.beginPath();
+
+          ctx.fillStyle = e.color;
+
+          ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+
+          ctx.fill();
+        });
+
+        ctx.shadowBlur = 0;
+      }
+
+      // ================================
+      // التصادم
+      // ================================
+
+      function checkCollision() {
+        enemies.forEach((e, index) => {
+          let dx = player.x - e.x;
+
+          let dy = player.y - e.y;
+
+          let distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < player.size + e.size) {
+            if (shield) {
+              shield = false;
+
+              enemies.splice(index, 1);
+
+              explode(e.x, e.y);
+
+              sound(900, 0.2);
+            } else {
+              endGame();
+            }
+          }
+        });
+      }
+
+      function updateScore() {
+        score++;
+
+        document.getElementById("score").innerHTML = score;
+      }
+
+      function createPowerUp() {
+        powerUps.push({
+          x: Math.random() * canvas.width,
+
+          y: Math.random() * canvas.height,
+
+          size: 15,
+
+          type: Math.random() > 0.5 ? "shield" : "slow",
+        });
+      }
+
+      function drawPowerUps() {
+        powerUps.forEach((p) => {
+          ctx.shadowBlur = 20;
+
+          ctx.shadowColor = p.type === "shield" ? "#22c55e" : "#38bdf8";
+
+          ctx.fillStyle = p.type === "shield" ? "#22c55e" : "#38bdf8";
+
+          ctx.beginPath();
+
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+
+          ctx.fill();
+        });
+
+        ctx.shadowBlur = 0;
+      }
+
+      function checkPowerUps() {
+        powerUps.forEach((p, index) => {
+          let dx = player.x - p.x;
+          let dy = player.y - p.y;
+
+          let d = Math.sqrt(dx * dx + dy * dy);
+
+          if (d < player.size + p.size) {
+            if (p.type === "shield") {
+              shield = true;
+            }
+
+            if (p.type === "slow") {
+              slowTime = 300;
+            }
+
+            powerUps.splice(index, 1);
+
+            sound(1000, 0.2);
+          }
+        });
+      }
+
+      setInterval(() => {
+        if (game) {
+          createPowerUp();
+        }
+      }, 15000);
+
+      // ================================
+      // الجزء الثالث
+      // محرك اللعبة + الانفجار + المؤثرات
+      // ================================
+
+      let particles = [];
+
+      let shake = 0;
+
+      // إنشاء انفجار
+
+      function explode(x, y) {
+        for (let i = 0; i < 80; i++) {
+          particles.push({
+            x: x,
+
+            y: y,
+
+            size: Math.random() * 5 + 2,
+
+            speedX: (Math.random() - 0.5) * 10,
+
+            speedY: (Math.random() - 0.5) * 10,
+
+            life: 1,
+
+            color: Math.random() > 0.5 ? "cyan" : "#ff0055",
+          });
+        }
+      }
+
+      function updateParticles() {
+        particles.forEach((p, index) => {
+          p.x += p.speedX;
+
+          p.y += p.speedY;
+
+          p.life -= 0.02;
+
+          p.size *= 0.98;
+
+          if (p.life <= 0) {
+            particles.splice(index, 1);
+          }
+        });
+      }
+
+      function drawParticles() {
+        particles.forEach((p) => {
+          ctx.globalAlpha = p.life;
+
+          ctx.shadowBlur = 20;
+
+          ctx.shadowColor = p.color;
+
+          ctx.fillStyle = p.color;
+
+          ctx.beginPath();
+
+          ctx.arc(
+            p.x,
+
+            p.y,
+
+            p.size,
+
+            0,
+
+            Math.PI * 2,
+          );
+
+          ctx.fill();
+        });
+
+        ctx.globalAlpha = 1;
+
+        ctx.shadowBlur = 0;
+      }
+
+      // نهاية اللعبة
+
+      function endGame() {
+        game = false;
+
+        explode(player.x, player.y);
+
+        shake = 20;
+
+        if (score > best) {
+          best = score;
+
+          localStorage.setItem("neonBest", best);
+
+          document.getElementById("best").innerHTML = best;
+        }
+
+        document.getElementById("finalScore").innerHTML = "SCORE : " + score;
+
+        setTimeout(() => {
+          enemies = [];
+
+          particles = [];
+
+          trail = [];
+        }, 500);
+
+        document.getElementById("over").classList.remove("hidden");
+      }
+
+      // تأثير اهتزاز الشاشة
+
+      function cameraShake() {
+        if (shake > 0) {
+          let x = (Math.random() - 0.5) * shake;
+
+          let y = (Math.random() - 0.5) * shake;
+
+          ctx.translate(x, y);
+
+          shake *= 0.9;
+        }
+      }
+
+      // ================================
+      // الحلقة الرئيسية
+      // ================================
+
+      function loop() {
+        if (!game) return;
+
+        requestAnimationFrame(loop);
+
+        ctx.save();
+
+        // مسح الشاشة
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        cameraShake();
+
+        drawStars();
+
+        if (dashCooldown > 0) dashCooldown--;
+
+        if (slowTime > 0) slowTime--;
+
+        movePlayer();
+
+        updateEnemies();
+
+        updateParticles();
+
+        drawParticles();
+
+        drawPowerUps();
+
+        checkPowerUps();
+
+        drawEnemies();
+
+        drawPlayer();
+
+        checkCollision();
+
+        updateScore();
+
+        document.getElementById("power").innerHTML =
+          shield && slowTime > 0
+            ? "❄️ SHIELD 🛡️, SLOW"
+            : shield
+              ? "🛡️ SHIELD"
+              : slowTime > 0
+                ? "❄️ SLOW"
+                : "";
+
+        ctx.restore();
+      }
+
+      // ================================
+      // الجزء الرابع
+      // تحسينات نهائية
+      // ================================
+
+      // مستوى الصعوبة
+
+      let level = 1;
+
+      let dashCooldown = 0;
+      let shield = false;
+      let slowTime = 0;
+
+      let powerUps = [];
+
+      let speedBoost = 0;
+
+      setInterval(() => {
+        if (game) {
+          level++;
+
+          enemies.forEach((e) => {
+            e.speed += 0.15;
+          });
+        }
+      }, 10000);
+
+      // ================================
+      // أصوات Web Audio
+      // ================================
+
+      let audioCtx;
+
+      function sound(freq, duration, type = "sine") {
+        try {
+          if (!audioCtx) audioCtx = new AudioContext();
+
+          let osc = audioCtx.createOscillator();
+
+          let gain = audioCtx.createGain();
+
+          osc.type = type;
+
+          osc.frequency.value = freq;
+
+          gain.gain.value = 0.08;
+
+          osc.connect(gain);
+
+          gain.connect(audioCtx.destination);
+
+          osc.start();
+
+          gain.gain.exponentialRampToValueAtTime(
+            0.001,
+
+            audioCtx.currentTime + duration,
+          );
+
+          osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {}
+      }
+
+      // تعديل البداية للصوت
+
+      let oldStart = startGame;
+
+      startGame = function () {
+        sound(500, 0.15, "square");
+
+        oldStart();
+      };
+
+      // تعديل الخسارة للصوت
+
+      let oldEnd = endGame;
+
+      endGame = function () {
+        sound(80, 0.5, "sawtooth");
+
+        oldEnd();
+      };
+
+      // ================================
+      // تحكم الموبايل
+      // ================================
+
+      let touchX = null;
+
+      let touchY = null;
+
+      canvas.addEventListener("touchstart", (e) => {
+        let t = e.touches[0];
+
+        touchX = t.clientX;
+
+        touchY = t.clientY;
+      });
+
+      canvas.addEventListener("touchmove", (e) => {
+        if (!touchX) return;
+
+        let t = e.touches[0];
+
+        let dx = t.clientX - touchX;
+
+        let dy = t.clientY - touchY;
+
+        let touchSpeed = isMobile ? 0.45 : 0.35;
+
+        if (Math.abs(dx) > 20) {
+          player.x += dx * touchSpeed;
+        }
+
+        if (Math.abs(dy) > 20) {
+          player.y += dy * touchSpeed;
+        }
+
+        touchX = t.clientX;
+
+        touchY = t.clientY;
+      });
+
+      // ================================
+      // تحسين ظهور الخلفية
+      // ================================
+
+      function drawStars() {
+        stars.forEach((s) => {
+          ctx.shadowBlur = 10;
+
+          ctx.shadowColor = "#38bdf8";
+
+          ctx.fillStyle = "#ffffff";
+
+          ctx.beginPath();
+
+          ctx.arc(
+            s.x,
+
+            s.y,
+
+            s.size,
+
+            0,
+
+            Math.PI * 2,
+          );
+
+          ctx.fill();
+
+          s.y += s.speed + level * 0.05;
+
+          if (s.y > canvas.height) {
+            s.y = 0;
+
+            s.x = Math.random() * canvas.width;
+          }
+        });
+
+        ctx.shadowBlur = 0;
+      }
+
+      // ================================
+      // منع خروج اللاعب
+      // ================================
+
+      setInterval(() => {
+        if (player.x < 0) player.x = 0;
+
+        if (player.x > canvas.width) player.x = canvas.width;
+
+        if (player.y < 0) player.y = 0;
+
+        if (player.y > canvas.height) player.y = canvas.height;
+      }, 50);
+    </script>
+  </body>
+</html>
