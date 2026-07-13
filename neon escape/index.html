@@ -90,14 +90,26 @@
 
       .panel {
         position: fixed;
-        inset: 0;
+
+        top: 0;
+        left: 0;
+
+        width: 100vw;
+        height: 100dvh;
+
         display: flex;
         align-items: center;
         justify-content: center;
+
         flex-direction: column;
+
         background: rgba(0, 0, 0, 0.45);
+
         backdrop-filter: blur(8px);
+
         z-index: 10;
+
+        text-align: center;
       }
 
       h1 {
@@ -215,9 +227,9 @@
       addEventListener("keydown", (e) => {
         keys[e.key] = true;
 
-        if (e.code === "Space") {
-          dash();
-        }
+        if (e.code === "Space") dash();
+
+        if (e.code === "Enter" && !game) startGame();
       });
 
       if (isMobile)
