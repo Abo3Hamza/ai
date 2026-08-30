@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة تصميم الهوية والشعارات الذكية المتكاملة</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Cairo & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Cairo', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #090d16 0%, #0d1322 50%, #111827 100%);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen p-3 sm:p-6 md:p-8 flex items-center justify-center">
+
+    <div class="bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 p-4 sm:p-7 md:p-9 rounded-3xl shadow-2xl w-full max-w-6xl my-auto">
+        
+        <!-- Header with API Key Management Controls -->
+        <header class="mb-7 border-b pb-6 border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="text-center md:text-right">
+                <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 tracking-tight">
+                    منصة تصميم الهوية والشعارات الذكية
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl">
+                    صمم وشخصّص هويتك البصرية واللفظية المتكاملة لأي مشروع تجاري باستخدام نماذج Gemini و Imagen المتقدمة.
+                </p>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <!-- History Button -->
+                <button id="openHistoryBtn" class="w-full sm:w-auto bg-purple-900/30 text-purple-400 hover:bg-purple-800/40 border border-purple-700/50 px-4 py-2.5 rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span class="text-xs sm:text-sm">سجل التصميمات</span>
+                </button>
+
+                <!-- API Key Status and Settings Button -->
+                <div class="w-full sm:w-auto flex items-center justify-between gap-3 bg-slate-950/70 border border-slate-800 px-3.5 py-2.5 rounded-2xl">
+                    <div class="flex items-center gap-2">
+                        <span id="apiKeyStatusDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span id="apiKeyStatusLabel" class="text-xs text-slate-300 font-medium">مفتاح API مطلوب</span>
+                    </div>
+                    <button id="openApiKeyModalBtn" class="text-xs bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600/30 border border-cyan-500/30 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 font-semibold">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                        <span>تغيير المفتاح ⚙️</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            
+            <!-- Left Column: Input Prompt & Action Buttons -->
+            <section class="space-y-5 flex flex-col justify-between">
+                <div class="bg-slate-950/40 p-5 sm:p-6 rounded-2xl border border-slate-800/60 space-y-4 flex-1">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base sm:text-lg font-bold text-slate-200 flex items-center gap-2.5">
+                            <span class="p-2 bg-purple-500/10 text-purple-400 rounded-xl">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </span>
+                            صياغة فكرة الشعار الأساسية
+                        </h2>
+                        <span class="text-[11px] text-slate-500 font-mono">Input Prompt</span>
+                    </div>
+                    
+                    <div>
+                        <label for="promptInput" class="block text-xs text-slate-400 mb-2 font-medium">اكتب فكرتك أو وصف الرموز والألوان والهوية التي ترغب بها:</label>
+                        <textarea id="promptInput" rows="7" class="w-full p-4 text-xs sm:text-sm border border-slate-800 rounded-2xl bg-slate-900 text-slate-200 placeholder-slate-600 focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500 transition duration-150 ease-in-out leading-relaxed custom-scrollbar" placeholder="مثال: شعار دائري متطور لشركة برمجيات وذكاء اصطناعي، يتميز بخطوط متقاطعة وشبكة اتصالات نيون زرقاء ولمسات برتقالية فخمة على خلفية سوداء نظيفة...">شعار دائري متطور لشركة برمجيات وذكاء اصطناعي، يتميز بخطوط متقاطعة وشبكة اتصالات نيون زرقاء ولمسات برتقالية فخمة على خلفية سوداء داكنة نظيفة.</textarea>
+                    </div>
+
+                    <!-- Generate Logo Button -->
+                    <button id="generateLogoBtn" class="w-full bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:via-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 px-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-indigo-500/25 transition duration-200 transform active:scale-98 text-sm sm:text-base flex items-center justify-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>توليد تصميم الشعار الآن</span>
+                        <div id="logoBtnLoader" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    </button>
+                </div>
+
+                <!-- Slogans Innovation Section -->
+                <section class="bg-slate-950/40 p-5 rounded-2xl border border-slate-800/60">
+                    <h2 class="text-sm sm:text-base font-bold text-slate-200 mb-2 flex items-center gap-2">
+                        <span class="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </span>
+                        ابتكار شعارات لفظية من وصفك (Slogans)
+                    </h2>
+                    <p class="text-[11px] text-slate-400 mb-3.5 leading-relaxed font-normal">
+                        يستخرج Gemini تلقائياً 5 شعارات لفظية مقترحة بالعربية والإنجليزية مستوحاة من فكرتك. اضغط على أي شعار لدمجه بالوصف.
+                    </p>
+                    
+                    <button id="generateSlogansBtn" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-2.5 px-4 rounded-xl transition duration-200 flex items-center justify-center gap-2 text-xs border border-slate-700 active:scale-98">
+                        <span id="slogansBtnText">توليد الشعارات المقترحة بـ Gemini</span>
+                        <div id="slogansBtnLoader" class="hidden w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    </button>
+                    
+                    <div id="slogansOutputList" class="mt-3.5 space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1 hidden border-t border-slate-800/70 pt-3">
+                        <!-- Slogans will render here -->
+                    </div>
+                </section>
+            </section>
+
+            <!-- Right Column: Logo Preview, AI Editor & Reproduction Prompt -->
+            <section class="space-y-5">
+                
+                <!-- Logo Preview Container -->
+                <div id="imageContainer" class="p-4 sm:p-5 border border-slate-800 rounded-2xl bg-slate-950/60 min-h-[300px] flex flex-col items-center justify-center relative overflow-hidden group">
+                    <img id="generatedImage" src="https://placehold.co/512x512/0c111d/475569?text=%D8%A7%D9%84%D8%B4%D8%B9%D8%A7%D8%B1+%D8%A7%D9%84%D8%AC%D8%A7%D9%87%D8%B2" alt="معاينة الشعار" class="max-w-[260px] sm:max-w-[280px] w-full h-auto rounded-2xl shadow-2xl transition duration-300 group-hover:scale-[1.02] border border-slate-800/80">
+                    <p id="imageStatusText" class="text-[11px] text-slate-500 mt-3 font-medium">سيظهر تصميم الشعار عالي الدقة هنا</p>
+                    
+                    <!-- Floating Download Button -->
+                    <a id="downloadBtn" href="#" download="Smart_Logo_Design.png" class="absolute bottom-4 right-4 bg-slate-900/90 border border-slate-700 hover:bg-slate-800 text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        تحميل الشعار
+                    </a>
+                </div>
+
+                <!-- Reproduction Prompt Display -->
+                <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800/80">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-[11px] text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            برومبت إعادة الإنتاج الفعلي:
+                        </h4>
+                        <button id="copyPromptBtn" class="text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-1 transition-colors px-2 py-0.5 rounded-lg hover:bg-slate-900 border border-transparent hover:border-slate-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-5 4h5m-5 4h5m-1 4h.01" />
+                            </svg>
+                            نسخ الوصف
+                        </button>
+                    </div>
+                    <p id="finalPromptDisplay" class="text-xs text-slate-300 italic max-h-28 overflow-y-auto custom-scrollbar select-all bg-slate-900/60 p-3 rounded-xl border border-slate-800/50 leading-relaxed font-mono">سيظهر هنا البرومبت التفصيلي الدقيق الذي أنتج الصورة المعروضة، يمكنك نسخه واستخدامه مستقبلاً لإعادة التوليد بدقة.</p>
+                </div>
+
+                <!-- AI Image Editor Tool -->
+                <section id="editorSection" class="bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60 space-y-3 hidden">
+                    <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5">
+                        <span class="p-1 bg-teal-500/10 text-teal-400 rounded-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </span>
+                        تعديل الشعار الحالي بالذكاء الاصطناعي
+                    </h3>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        اكتب التعديل الدقيق المطلوب (مثال: "اجعل الخلفية بيضاء نقية"، "غيّر اللون الأزرق إلى ذهبي فاخر").
+                    </p>
+                    
+                    <div class="flex gap-2">
+                        <input id="editInstructionInput" type="text" class="flex-1 p-2.5 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 focus:ring-1 focus:ring-teal-500 placeholder-slate-600" placeholder="اكتب التعديل المطلوب هنا...">
+                        <button id="applyEditBtn" class="bg-teal-600 hover:bg-teal-500 text-white font-semibold px-5 rounded-xl text-xs transition duration-200 flex items-center justify-center gap-1.5 shadow-md shadow-teal-900/20 active:scale-95">
+                            <span id="applyEditBtnText">تعديل</span>
+                            <div id="applyEditLoader" class="hidden w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        </button>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <!-- API Key Settings Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <span class="p-1.5 bg-cyan-500/10 text-cyan-400 rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                    </span>
+                    إعداد مفتاح Google Gemini API
+                </h3>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-400 leading-relaxed">
+                يتم حفظ المفتاح بأمان داخل متصفحك محلياً (<code class="text-cyan-400">localStorage</code>) ولا يتم مشاركته مع أي جهة خارجية.
+            </p>
+
+            <div>
+                <label for="modalApiKeyInput" class="block text-xs font-semibold text-slate-300 mb-1.5">مفتاح API الخاص بك:</label>
+                <input id="modalApiKeyInput" type="password" class="w-full p-3 text-xs rounded-xl bg-slate-950 border border-slate-800 text-slate-200 focus:ring-1 focus:ring-cyan-500 font-mono placeholder-slate-600" placeholder="AIzaSy...">
+            </div>
+
+            <div class="p-3 bg-cyan-950/30 border border-cyan-800/40 rounded-xl text-[11px] text-cyan-300 space-y-1">
+                <p class="font-semibold">💡 كيف تحصل على مفتاح مجاني؟</p>
+                <p>قم بزيارة <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline text-cyan-400 font-bold hover:text-cyan-300">Google AI Studio</a>، ثم اضغط على "Get API key" وانسخ المفتاح وضعه هنا.</p>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+                <button id="saveApiKeyBtn" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition duration-150">
+                    حفظ المفتاح ومتابعة العمل
+                </button>
+                <button id="clearApiKeyBtn" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs py-2.5 px-3 rounded-xl border border-slate-700 transition duration-150">
+                    مسح
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-5xl w-full shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between border-b border-slate-800 p-5">
+                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <span class="p-1.5 bg-purple-500/10 text-purple-400 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    سجل التصميمات السابقة
+                </h3>
+                <div class="flex items-center gap-3">
+                    <button id="clearHistoryBtn" class="text-xs bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 font-semibold hidden">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        مسح السجل بالكامل
+                    </button>
+                    <button id="closeHistoryBtn" class="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="historyEmptyState" class="flex-1 p-10 flex flex-col items-center justify-center text-center hidden">
+                <svg class="w-16 h-16 text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <p class="text-slate-400 font-medium">لا توجد تصميمات سابقة في السجل.</p>
+                <p class="text-xs text-slate-500 mt-2">سيتم حفظ أي شعار تقوم بتوليده أو تعديله هنا تلقائياً لسهولة الرجوع إليه.</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                <div id="historyGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                    <!-- History items will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification System -->
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-2xl flex items-center gap-3 z-50 max-w-sm">
+        <div id="toastIconContainer" class="p-1.5 rounded-lg flex-shrink-0"></div>
+        <div>
+            <p id="toastTitle" class="text-xs font-bold text-slate-200"></p>
+            <p id="toastMessage" class="text-[11px] text-slate-400 mt-0.5 leading-normal"></p>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let currentApiKey = localStorage.getItem('gemini_api_key') || "";
+        let currentImageBase64 = "";
+        
+        // History State
+        let generationHistory = JSON.parse(localStorage.getItem('agpro_logo_history')) || [];
+
+        // UI Element References
+        const apiKeyStatusDot = document.getElementById('apiKeyStatusDot');
+        const apiKeyStatusLabel = document.getElementById('apiKeyStatusLabel');
+        const openApiKeyModalBtn = document.getElementById('openApiKeyModalBtn');
+        const apiKeyModal = document.getElementById('apiKeyModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const modalApiKeyInput = document.getElementById('modalApiKeyInput');
+        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+        const clearApiKeyBtn = document.getElementById('clearApiKeyBtn');
+
+        const promptInput = document.getElementById('promptInput');
+        const generateLogoBtn = document.getElementById('generateLogoBtn');
+        const logoBtnLoader = document.getElementById('logoBtnLoader');
+        const generatedImage = document.getElementById('generatedImage');
+        const imageStatusText = document.getElementById('imageStatusText');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        const finalPromptDisplay = document.getElementById('finalPromptDisplay');
+        const copyPromptBtn = document.getElementById('copyPromptBtn');
+
+        const generateSlogansBtn = document.getElementById('generateSlogansBtn');
+        const slogansBtnText = document.getElementById('slogansBtnText');
+        const slogansBtnLoader = document.getElementById('slogansBtnLoader');
+        const slogansOutputList = document.getElementById('slogansOutputList');
+
+        const editorSection = document.getElementById('editorSection');
+        const editInstructionInput = document.getElementById('editInstructionInput');
+        const applyEditBtn = document.getElementById('applyEditBtn');
+        const applyEditBtnText = document.getElementById('applyEditBtnText');
+        const applyEditLoader = document.getElementById('applyEditLoader');
+
+        const openHistoryBtn = document.getElementById('openHistoryBtn');
+        const historyModal = document.getElementById('historyModal');
+        const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const historyGrid = document.getElementById('historyGrid');
+        const historyEmptyState = document.getElementById('historyEmptyState');
+
+        const toast = document.getElementById('toast');
+        const toastIconContainer = document.getElementById('toastIconContainer');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+
+        function updateApiKeyStatus() {
+            if (currentApiKey && currentApiKey.trim().length > 10) {
+                apiKeyStatusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+                apiKeyStatusLabel.textContent = "المفتاح جاهز ومفعل";
+                apiKeyStatusLabel.className = "text-xs text-emerald-400 font-medium";
+            } else {
+                apiKeyStatusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+                apiKeyStatusLabel.textContent = "مفتاح API مطلوب";
+                apiKeyStatusLabel.className = "text-xs text-amber-400 font-medium";
+            }
+        }
+        updateApiKeyStatus();
+
+        function showNotification(title, message, type = 'info') {
+            toastTitle.textContent = title;
+            toastMessage.textContent = message;
+            
+            if (type === 'success') {
+                toastIconContainer.className = "p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg";
+                toastIconContainer.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+            } else if (type === 'error') {
+                toastIconContainer.className = "p-1.5 bg-rose-500/10 text-rose-400 rounded-lg";
+                toastIconContainer.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+            } else {
+                toastIconContainer.className = "p-1.5 bg-cyan-500/10 text-cyan-400 rounded-lg";
+                toastIconContainer.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 4500);
+        }
+
+        function openModal() {
+            modalApiKeyInput.value = currentApiKey;
+            apiKeyModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            apiKeyModal.classList.add('hidden');
+        }
+
+        openApiKeyModalBtn.addEventListener('click', openModal);
+        closeModalBtn.addEventListener('click', closeModal);
+
+        saveApiKeyBtn.addEventListener('click', () => {
+            const val = modalApiKeyInput.value.trim();
+            if (!val) {
+                showNotification('تنبيه', 'يرجى إدخال مفتاح API صحيح.', 'error');
+                return;
+            }
+            currentApiKey = val;
+            localStorage.setItem('gemini_api_key', val);
+            updateApiKeyStatus();
+            closeModal();
+            showNotification('تم الحفظ بنجاح', 'تم تخزين مفتاح API في متصفحك محلياً بنجاح.', 'success');
+        });
+
+        clearApiKeyBtn.addEventListener('click', () => {
+            currentApiKey = "";
+            localStorage.removeItem('gemini_api_key');
+            modalApiKeyInput.value = "";
+            updateApiKeyStatus();
+            showNotification('تم المسح', 'تم حذف مفتاح API من المتصفح.', 'info');
+        });
+
+        // History Management Functions
+        function saveToHistory(prompt, imageSrc) {
+            const newItem = {
+                id: Date.now().toString(),
+                date: new Date().toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }),
+                prompt: prompt,
+                image: imageSrc
+            };
+            
+            generationHistory.unshift(newItem); // Add newest to the beginning
+            
+            // Limit history to 12 items to prevent localStorage quota exceeded errors
+            if (generationHistory.length > 12) {
+                generationHistory.pop();
+            }
+
+            try {
+                localStorage.setItem('agpro_logo_history', JSON.stringify(generationHistory));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    // Try removing 3 oldest elements and saving again
+                    generationHistory.splice(-3, 3);
+                    try {
+                        localStorage.setItem('agpro_logo_history', JSON.stringify(generationHistory));
+                        showNotification('تنبيه مساحة التخزين', 'مساحة التخزين ممتلئة. تم حذف أقدم العناصر تلقائياً للحفاظ على الجديد.', 'info');
+                    } catch (err) {
+                        showNotification('خطأ في التخزين', 'لا يمكن حفظ الصورة في السجل لأن المساحة ممتلئة تماماً.', 'error');
+                    }
+                }
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            historyGrid.innerHTML = '';
+            
+            if (generationHistory.length === 0) {
+                historyEmptyState.classList.remove('hidden');
+                clearHistoryBtn.classList.add('hidden');
+            } else {
+                historyEmptyState.classList.add('hidden');
+                clearHistoryBtn.classList.remove('hidden');
+                
+                generationHistory.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-950/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group hover:border-slate-600 transition-colors duration-200 h-full";
+                    
+                    card.innerHTML = `
+                        <div class="relative w-full aspect-square bg-slate-900 flex items-center justify-center p-3 border-b border-slate-800/60">
+                            <img src="${item.image}" alt="Logo History" class="max-w-full max-h-full object-contain rounded-xl shadow-lg">
+                            <div class="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3 backdrop-blur-sm">
+                                <button onclick="restoreFromHistory('${item.id}')" title="استعادة الشعار للتعديل" class="bg-cyan-600 hover:bg-cyan-500 text-white p-2.5 rounded-xl text-xs font-semibold shadow-xl transform hover:scale-110 transition-all">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                </button>
+                                <button onclick="deleteFromHistory('${item.id}')" title="حذف من السجل" class="bg-rose-600 hover:bg-rose-500 text-white p-2.5 rounded-xl text-xs font-semibold shadow-xl transform hover:scale-110 transition-all">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 flex-1 flex flex-col justify-between bg-slate-900/30">
+                            <p class="text-[10px] text-slate-300 line-clamp-3 mb-2 leading-relaxed" title="${item.prompt}">${item.prompt}</p>
+                            <span class="text-[9px] text-slate-500 font-mono mt-auto block pt-1">${item.date}</span>
+                        </div>
+                    `;
+                    historyGrid.appendChild(card);
+                });
+            }
+        }
+
+        window.deleteFromHistory = function(id) {
+            generationHistory = generationHistory.filter(item => item.id !== id);
+            localStorage.setItem('agpro_logo_history', JSON.stringify(generationHistory));
+            renderHistory();
+            showNotification('تم الحذف', 'تم حذف التصميم من السجل بنجاح.', 'success');
+        };
+
+        window.restoreFromHistory = function(id) {
+            const item = generationHistory.find(i => i.id === id);
+            if (item) {
+                generatedImage.src = item.image;
+                downloadBtn.href = item.image;
+                currentImageBase64 = item.image.replace(/^data:image\/[a-z]+;base64,/, "");
+                
+                finalPromptDisplay.textContent = item.prompt;
+                finalPromptDisplay.classList.add('bg-slate-900/50');
+                
+                editorSection.classList.remove('hidden');
+                imageStatusText.textContent = "تم استعادة الشعار من السجل للمعاينة والتعديل.";
+                
+                closeHistoryModal();
+                showNotification('تمت الاستعادة', 'تم تحميل الشعار المحدد لساحة العمل بنجاح.', 'success');
+            }
+        };
+
+        function openHistoryModal() {
+            renderHistory();
+            historyModal.classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            historyModal.classList.add('hidden');
+        }
+
+        openHistoryBtn.addEventListener('click', openHistoryModal);
+        closeHistoryBtn.addEventListener('click', closeHistoryModal);
+
+        clearHistoryBtn.addEventListener('click', () => {
+            generationHistory = [];
+            localStorage.removeItem('agpro_logo_history');
+            renderHistory();
+            showNotification('تم المسح', 'تم مسح السجل بالكامل بنجاح.', 'info');
+        });
+
+        function checkApiKey() {
+            if (!currentApiKey || currentApiKey.trim().length < 10) {
+                openModal();
+                showNotification('تنبيه', 'يرجى إدخال مفتاح Gemini API للمتابعة.', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        async function fetchWithRetry(url, options, maxRetries = 2) {
+            let delay = 1500;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    
+                    if (response.status === 401) {
+                        openModal();
+                        throw new Error("خطأ 401: مفتاح API غير صالح أو غير مصرح به. يرجى التأكد من كتابة مفتاح Gemini صالح.");
+                    }
+                    if (response.status === 429) {
+                        const errData = await response.json().catch(() => ({}));
+                        const quotaMsg = errData.error?.message || "تم تجاوز حد الطلبات المسموح به لحسابك (429 Quota Exceeded).";
+                        throw new Error(`429_QUOTA: ${quotaMsg}`);
+                    }
+                    if (response.status >= 500) {
+                        throw new Error(`خطأ خادم (${response.status})`);
+                    } else {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error?.message || `خطأ استجابة (${response.status})`);
+                    }
+                } catch (err) {
+                    if (err.message.startsWith("429_QUOTA") || err.message.includes("401") || i === maxRetries - 1) {
+                        throw err;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        copyPromptBtn.addEventListener('click', () => {
+            const promptText = finalPromptDisplay.textContent;
+            if (promptText && !promptText.startsWith('سيظهر هنا')) {
+                const textarea = document.createElement('textarea');
+                textarea.value = promptText;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showNotification('تم النسخ!', 'تم نسخ البرومبت أو تعليمة التعديل الفعلية بنجاح.', 'success');
+            } else {
+                showNotification('تنبيه', 'لا يوجد برومبت إعادة إنتاج جاهز للنسخ بعد.', 'error');
+            }
+        });
+
+        generateSlogansBtn.addEventListener('click', async () => {
+            if (!checkApiKey()) return;
+
+            const baseIdea = promptInput.value.trim();
+            if (!baseIdea) {
+                showNotification('تنبيه', 'يرجى وصف فكرة الشعار أولاً لتوليد شعارات لفظية مستوحاة منها.', 'error');
+                return;
+            }
+
+            generateSlogansBtn.disabled = true;
+            slogansBtnLoader.classList.remove('hidden');
+            slogansBtnText.textContent = "جاري ابتكار الشعارات...";
+
+            const promptMessage = `Based on this visual description for a logo and brand identity: "${baseIdea}". Generate exactly 5 short, catchy, and creative business slogans/taglines that perfectly reflect the core visual concept. Provide both an Arabic and an English translation for each slogan. Output only as a neat numbered list.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: promptMessage }] }]
+            };
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${currentApiKey}`;
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const textOutput = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (textOutput) {
+                    const lines = textOutput.split('\n').filter(line => line.trim() !== '');
+                    slogansOutputList.innerHTML = '';
+                    
+                    lines.forEach(line => {
+                        const div = document.createElement('div');
+                        div.className = "p-3 bg-slate-900 border border-slate-800/80 rounded-xl text-xs text-slate-300 hover:border-cyan-500/40 cursor-pointer transition-all duration-150 flex items-start gap-2.5 leading-relaxed";
+                        div.innerHTML = `
+                            <span class="text-cyan-400 mt-1">•</span>
+                            <span class="flex-1">${line}</span>
+                        `;
+                        div.addEventListener('click', () => {
+                            const cleanSlogan = line.replace(/^\d+[\.\s\-]+/, '');
+                            promptInput.value = promptInput.value + ` يتضمن الشعار أو الهوية الفلسفة المستوحاة من: "${cleanSlogan}"`;
+                            showNotification('تم الاختيار!', 'تم إضافة الشعار اللفظي المختار إلى الوصف الأساسي.', 'success');
+                        });
+                        slogansOutputList.appendChild(div);
+                    });
+                    
+                    slogansOutputList.classList.remove('hidden');
+                    showNotification('تم توليد الشعارات!', 'اضغط على أي شعار لإدراجه ضمن فكرة التصميم.', 'success');
+                } else {
+                    throw new Error('لم يتوفر رد صالح من خادم النصوص.');
+                }
+            } catch (err) {
+                console.error(err);
+                showNotification('فشل الابتكار اللفظي', err.message, 'error');
+            } finally {
+                generateSlogansBtn.disabled = false;
+                slogansBtnLoader.classList.add('hidden');
+                slogansBtnText.textContent = "توليد الشعارات المقترحة بـ Gemini";
+            }
+        });
+
+        async function callImageGenerationApi(promptText) {
+            let lastError = null;
+
+            // Priority 1: Imagen 3 Predict API
+            try {
+                const imagenPayload = {
+                    instances: [{ prompt: promptText }],
+                    parameters: { sampleCount: 1, aspectRatio: "1:1" }
+                };
+                const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${currentApiKey}`;
+                const res = await fetchWithRetry(imagenUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(imagenPayload)
+                });
+                const data = await res.json();
+                const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+                if (b64) return { base64: b64, mime: 'image/png' };
+            } catch (err1) {
+                console.warn('Imagen 3 attempt encountered an error:', err1.message);
+                lastError = err1;
+            }
+
+            // Priority 2: Gemini Multimodal Flash Image API
+            try {
+                const geminiPayload = {
+                    contents: [{ parts: [{ text: `Generate a high resolution vector logo design: ${promptText}` }] }],
+                    generationConfig: { responseModalities: ["IMAGE", "TEXT"] }
+                };
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${currentApiKey}`;
+                const res2 = await fetchWithRetry(geminiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(geminiPayload)
+                });
+                const data2 = await res2.json();
+                const parts = data2.candidates?.[0]?.content?.parts || [];
+                const imgPart = parts.find(p => p.inlineData || p.inline_data);
+                const b64 = imgPart?.inlineData?.data || imgPart?.inline_data?.data;
+                const mime = imgPart?.inlineData?.mimeType || imgPart?.inline_data?.mimeType || 'image/png';
+                if (b64) return { base64: b64, mime: mime };
+            } catch (err2) {
+                console.warn('Gemini Flash Image fallback encountered an error:', err2.message);
+                lastError = err2;
+            }
+
+            // Priority 3: Failover Logo Engine (Handles 429 Quota Exceeded seamlessly)
+            try {
+                showNotification('تنبيه الكوتا (429)', 'تم استنفاد كوتا Imagen لمفتاحك مؤقتاً، جاري التحويل للمحرك البديل الفوري...', 'info');
+                const cleanSeed = Math.floor(Math.random() * 999999);
+                const encodedPrompt = encodeURIComponent(`modern vector logo brand mark, ${promptText.slice(0, 180)}, clean dark background, 8k, professional graphic design`);
+                const fallbackImgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&seed=${cleanSeed}&nologo=true`;
+                
+                const fallbackRes = await fetch(fallbackImgUrl);
+                if (fallbackRes.ok) {
+                    const blob = await fallbackRes.blob();
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const resultStr = reader.result;
+                            const rawB64 = resultStr.split(',')[1];
+                            resolve({ base64: rawB64, mime: blob.type || 'image/png' });
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            } catch (err3) {
+                console.warn('Fallback generator failed:', err3);
+            }
+
+            if (lastError && lastError.message.includes('429')) {
+                throw new Error('تم استهلاك كوتا الحساب المجاني (خطأ 429). يُرجى الانتظار دقيقة واحدة وإعادة المحاولة أو استخدام مفتاح API به رصيد نشط.');
+            }
+
+            throw new Error(lastError ? lastError.message : 'تعذر توليد الشعار حالياً. يرجى التحقق من اتصال الإنترنت ومفتاح API.');
+        }
+
+        generateLogoBtn.addEventListener('click', async () => {
+            if (!checkApiKey()) return;
+
+            const userPrompt = promptInput.value.trim();
+            if (!userPrompt) {
+                showNotification('تنبيه', 'يرجى كتابة وصف فكرة الشعار لبدء التصميم.', 'error');
+                return;
+            }
+
+            const internalEnglishPrompt = `Professional modern high-end vector logo design based on the concept: "${userPrompt}". Clean graphic, beautiful composition, 8k resolution, photorealistic studio lighting, dark clean neutral backdrop.`;
+
+            generateLogoBtn.disabled = true;
+            logoBtnLoader.classList.remove('hidden');
+            imageStatusText.textContent = "جاري دمج الذكاء الاصطناعي وبناء لوحة الشعار...";
+            generatedImage.src = "https://placehold.co/512x512/030712/94a3b8?text=%D8%AC%D8%A7%D8%B1%D9%8A+%D8%A7%D9%84%D8%AA%D8%B5%D9%85%D9%8A%D9%85...";
+
+            try {
+                const { base64, mime } = await callImageGenerationApi(internalEnglishPrompt);
+
+                currentImageBase64 = base64;
+                const finalImageSrc = `data:${mime};base64,${currentImageBase64}`;
+                generatedImage.src = finalImageSrc;
+                downloadBtn.href = finalImageSrc;
+                imageStatusText.textContent = "تم الانتهاء من تصميم الشعار بنجاح!";
+                
+                editorSection.classList.remove('hidden');
+
+                finalPromptDisplay.textContent = internalEnglishPrompt;
+                finalPromptDisplay.classList.add('bg-slate-900/50');
+                
+                // Save to history on successful generation
+                saveToHistory(internalEnglishPrompt, finalImageSrc);
+                
+                showNotification('تم التصميم بنجاح!', 'تم إخراج هوية العلامة التجارية بنجاح فائق.', 'success');
+            } catch (err) {
+                console.error(err);
+                generatedImage.src = "https://placehold.co/512x512/451a03/f87171?text=%D8%AE%D8%B7%D8%A3+%D9%81%D9%8A+%D8%A7%D9%84%D8%AA%D9%88%D9%84%D9%8A%D8%AF";
+                imageStatusText.textContent = "فشلت عملية التوليد الذكي.";
+                showNotification('خطأ في التوليد', err.message, 'error');
+            } finally {
+                generateLogoBtn.disabled = false;
+                logoBtnLoader.classList.add('hidden');
+            }
+        });
+
+        applyEditBtn.addEventListener('click', async () => {
+            if (!checkApiKey()) return;
+
+            const editInstruction = editInstructionInput.value.trim();
+            if (!editInstruction) {
+                showNotification('تنبيه', 'يرجى كتابة التعديل المراد تطبيقه على الشعار.', 'error');
+                return;
+            }
+            if (!currentImageBase64) {
+                showNotification('عذراً', 'لا توجد صورة شعار حالية لتعديلها. يرجى توليد شعار أولاً.', 'error');
+                return;
+            }
+
+            applyEditBtn.disabled = true;
+            applyEditLoader.classList.remove('hidden');
+            applyEditBtnText.textContent = "جاري التحديث...";
+            imageStatusText.textContent = "جاري تعديل تفاصيل الشعار بالذكاء الاصطناعي المعزز...";
+
+            const rawBase64 = currentImageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
+
+            // Attempt 1: Gemini multimodal image modification
+            let success = false;
+            try {
+                const payload = {
+                    contents: [{
+                        parts: [
+                            { text: `Modify the provided logo image strictly according to this instruction: "${editInstruction}". Keep the core graphic elements high quality and clean. Output ONLY the resulting image.` },
+                            {
+                                inlineData: {
+                                    mimeType: "image/png",
+                                    data: rawBase64
+                                }
+                            }
+                        ]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["IMAGE", "TEXT"]
+                    }
+                };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${currentApiKey}`;
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const parts = result.candidates?.[0]?.content?.parts || [];
+                const imgPart = parts.find(p => p.inlineData || p.inline_data);
+                const returnedBase64 = imgPart?.inlineData?.data || imgPart?.inline_data?.data;
+
+                if (returnedBase64) {
+                    currentImageBase64 = returnedBase64;
+                    const mime = imgPart?.inlineData?.mimeType || imgPart?.inline_data?.mimeType || 'image/png';
+                    const finalImageSrc = `data:${mime};base64,${currentImageBase64}`;
+                    generatedImage.src = finalImageSrc;
+                    downloadBtn.href = finalImageSrc;
+                    success = true;
+                }
+            } catch (e) {
+                console.warn('Multimodal edit failed, falling back to prompt synthesis edit...', e);
+            }
+
+            // Fallback: Re-synthesize using image cascade with edit context
+            if (!success) {
+                try {
+                    const originalPrompt = finalPromptDisplay.textContent.startsWith('سيظهر') ? promptInput.value : finalPromptDisplay.textContent;
+                    const combinedPrompt = `${originalPrompt}. Applied modification: ${editInstruction}. Maintain clean professional vector logo quality.`;
+                    const { base64, mime } = await callImageGenerationApi(combinedPrompt);
+                    currentImageBase64 = base64;
+                    const finalImageSrc = `data:${mime};base64,${currentImageBase64}`;
+                    generatedImage.src = finalImageSrc;
+                    downloadBtn.href = finalImageSrc;
+                    success = true;
+                } catch (fallbackErr) {
+                    console.error('Fallback edit failed:', fallbackErr);
+                }
+            }
+
+            if (success) {
+                imageStatusText.textContent = "تم تعديل الشعار وتحديث التصميم!";
+                finalPromptDisplay.textContent = editInstruction;
+                finalPromptDisplay.classList.add('bg-teal-900/20', 'border-teal-800/50');
+                
+                // Save to history on successful edit
+                const finalImageSrc = generatedImage.src;
+                saveToHistory(`تعديل: ${editInstruction}`, finalImageSrc);
+                
+                showNotification('تم التعديل بنجاح!', 'تم تحديث الشعار بناءً على رغبتك بدقة.', 'success');
+                editInstructionInput.value = "";
+            } else {
+                imageStatusText.textContent = "فشل تعديل الشعار الحالي.";
+                showNotification('فشل التعديل الذكي', 'تعذر تطبيق التعديل على الشعار الحالي. يرجى إعادة المحاولة.', 'error');
+            }
+
+            applyEditBtn.disabled = false;
+            applyEditLoader.classList.add('hidden');
+            applyEditBtnText.textContent = "تعديل";
+        });
+    </script>
+</body>
+</html>
