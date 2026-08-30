@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة تصميم الهوية والشعارات الذكية المتكاملة</title>
+    <title>logify</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts Cairo & Inter -->
@@ -576,7 +576,8 @@
             const payload = {
                 contents: [{ parts: [{ text: promptMessage }] }]
             };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${currentApiKey}`;
+            // Use stable 1.5-flash for text to avoid aggressive rate limits on preview models
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentApiKey}`;
 
             try {
                 const response = await fetchWithRetry(apiUrl, {
@@ -622,83 +623,88 @@
             }
         });
 
-        async function callImageGenerationApi(promptText) {
-            let lastError = null;
-
-            // Priority 1: Imagen 3 Predict API
-            try {
-                const imagenPayload = {
-                    instances: [{ prompt: promptText }],
-                    parameters: { sampleCount: 1, aspectRatio: "1:1" }
-                };
-                const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${currentApiKey}`;
-                const res = await fetchWithRetry(imagenUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(imagenPayload)
-                });
-                const data = await res.json();
-                const b64 = data.predictions?.[0]?.bytesBase64Encoded;
-                if (b64) return { base64: b64, mime: 'image/png' };
-            } catch (err1) {
-                console.warn('Imagen 3 attempt encountered an error:', err1.message);
-                lastError = err1;
-            }
-
-            // Priority 2: Gemini Multimodal Flash Image API
-            try {
-                const geminiPayload = {
-                    contents: [{ parts: [{ text: `Generate a high resolution vector logo design: ${promptText}` }] }],
-                    generationConfig: { responseModalities: ["IMAGE", "TEXT"] }
-                };
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${currentApiKey}`;
-                const res2 = await fetchWithRetry(geminiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(geminiPayload)
-                });
-                const data2 = await res2.json();
-                const parts = data2.candidates?.[0]?.content?.parts || [];
-                const imgPart = parts.find(p => p.inlineData || p.inline_data);
-                const b64 = imgPart?.inlineData?.data || imgPart?.inline_data?.data;
-                const mime = imgPart?.inlineData?.mimeType || imgPart?.inline_data?.mimeType || 'image/png';
-                if (b64) return { base64: b64, mime: mime };
-            } catch (err2) {
-                console.warn('Gemini Flash Image fallback encountered an error:', err2.message);
-                lastError = err2;
-            }
-
-            // Priority 3: Failover Logo Engine (Handles 429 Quota Exceeded seamlessly)
-            try {
-                showNotification('تنبيه الكوتا (429)', 'تم استنفاد كوتا Imagen لمفتاحك مؤقتاً، جاري التحويل للمحرك البديل الفوري...', 'info');
-                const cleanSeed = Math.floor(Math.random() * 999999);
-                const encodedPrompt = encodeURIComponent(`modern vector logo brand mark, ${promptText.slice(0, 180)}, clean dark background, 8k, professional graphic design`);
-                const fallbackImgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&seed=${cleanSeed}&nologo=true`;
-                
-                const fallbackRes = await fetch(fallbackImgUrl);
-                if (fallbackRes.ok) {
-                    const blob = await fallbackRes.blob();
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const resultStr = reader.result;
-                            const rawB64 = resultStr.split(',')[1];
-                            resolve({ base64: rawB64, mime: blob.type || 'image/png' });
-                        };
-                        reader.onerror = reject;
-                        reader.readAsDataURL(blob);
-                    });
+        // Helper Function: ترجمة الوصف العربي إلى برومبت إنجليزي احترافي لضمان دقة المحركات البديلة
+        async function translateToArabicToEnglish(text) {
+            // إذا كان النص يحتوي على أحرف عربية
+            if (/[\u0600-\u06FF]/.test(text)) {
+                try {
+                    const payload = {
+                        contents: [{ parts: [{ text: `Translate the following logo design concept to a precise, descriptive English prompt for an AI image generator (like Midjourney). Output ONLY the English text without any quotes or introductions: ${text}` }] }]
+                    };
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentApiKey}`;
+                    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    const data = await res.json();
+                    const transText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (transText) return transText.trim();
+                } catch (e) {
+                    console.warn("Translation fallback failed", e);
                 }
-            } catch (err3) {
-                console.warn('Fallback generator failed:', err3);
             }
-
-            if (lastError && lastError.message.includes('429')) {
-                throw new Error('تم استهلاك كوتا الحساب المجاني (خطأ 429). يُرجى الانتظار دقيقة واحدة وإعادة المحاولة أو استخدام مفتاح API به رصيد نشط.');
-            }
-
-            throw new Error(lastError ? lastError.message : 'تعذر توليد الشعار حالياً. يرجى التحقق من اتصال الإنترنت ومفتاح API.');
+            return text; // إرجاع النص الأصلي في حال فشل الترجمة أو كان إنجليزياً بالفعل
         }
+
+        async function callImageGenerationApi(promptText) {
+    let lastError = null;
+
+    // 🌟 المحاولة الأولى: الأساسي (Google Imagen 3 عبر مفتاح Gemini)
+    try {
+        const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${currentApiKey}`;
+        const payload = {
+            instances: [{ prompt: promptText }],
+            parameters: { sampleCount: 1, aspectRatio: "1:1" }
+        };
+
+        const res = await fetchWithRetry(imagenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if (data.predictions && data.predictions.length > 0) {
+            const b64 = data.predictions[0].bytesBase64Encoded;
+            const mime = data.predictions[0].mimeType || 'image/png';
+            return { base64: b64, mime: mime };
+        } else {
+            throw new Error("جوجل لم ترجع صورة (قد يكون الوصف مخالفاً لسياسات الأمان).");
+        }
+    } catch (err1) {
+        console.warn('Gemini Imagen 3 API failed:', err1.message);
+        lastError = err1;
+    }
+
+    // 🚀 المحاولة الثانية: البديل القوي (محرك FLUX.1 عبر واجهة Pollinations المجانية)
+    // الكود هيوصل هنا بس لو المحاولة الأولى فشلت
+    try {
+        showNotification('تنبيه الكوتا/الأمان', 'تعذر التوليد بـ Gemini، يتم الآن استخدام البديل القوي (FLUX)...', 'info');
+        
+        const seed = Math.floor(Math.random() * 10000000);
+        // تم تحديد model=flux لضمان أعلى جودة ممكنة للبديل
+        const fallbackUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux`;
+        
+        const fallbackRes = await fetch(fallbackUrl);
+
+        if (fallbackRes.ok) {
+            const blob = await fallbackRes.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const resultStr = reader.result;
+                    const rawB64 = resultStr.split(',')[1];
+                    resolve({ base64: rawB64, mime: blob.type || 'image/png' });
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } else {
+            throw new Error(`Fallback API failed: ${fallbackRes.status}`);
+        }
+    } catch (err2) {
+        console.warn('Fallback generator failed:', err2);
+        throw new Error('فشل التوليد عبر المحرك الأساسي (Gemini) والبديل (FLUX). يرجى التأكد من مفتاح API أو اتصال الإنترنت.');
+    }
+}
 
         generateLogoBtn.addEventListener('click', async () => {
             if (!checkApiKey()) return;
@@ -709,14 +715,16 @@
                 return;
             }
 
-            const internalEnglishPrompt = `Professional modern high-end vector logo design based on the concept: "${userPrompt}". Clean graphic, beautiful composition, 8k resolution, photorealistic studio lighting, dark clean neutral backdrop.`;
-
             generateLogoBtn.disabled = true;
             logoBtnLoader.classList.remove('hidden');
-            imageStatusText.textContent = "جاري دمج الذكاء الاصطناعي وبناء لوحة الشعار...";
+            imageStatusText.textContent = "جاري ترجمة الوصف وبناء لوحة الشعار...";
             generatedImage.src = "https://placehold.co/512x512/030712/94a3b8?text=%D8%AC%D8%A7%D8%B1%D9%8A+%D8%A7%D9%84%D8%AA%D8%B5%D9%85%D9%8A%D9%85...";
 
             try {
+                // ترجمة الوصف العربي للإنجليزية لضمان دقة المحركات البديلة
+                const translatedPrompt = await translateToArabicToEnglish(userPrompt);
+                const internalEnglishPrompt = `Professional modern high-end vector logo design based on the concept: "${translatedPrompt}". Clean graphic, beautiful composition, 8k resolution, photorealistic studio lighting, dark clean neutral backdrop.`;
+
                 const { base64, mime } = await callImageGenerationApi(internalEnglishPrompt);
 
                 currentImageBase64 = base64;
@@ -731,7 +739,7 @@
                 finalPromptDisplay.classList.add('bg-slate-900/50');
                 
                 // Save to history on successful generation
-                saveToHistory(internalEnglishPrompt, finalImageSrc);
+                saveToHistory(userPrompt, finalImageSrc);
                 
                 showNotification('تم التصميم بنجاح!', 'تم إخراج هوية العلامة التجارية بنجاح فائق.', 'success');
             } catch (err) {
@@ -746,104 +754,49 @@
         });
 
         applyEditBtn.addEventListener('click', async () => {
-            if (!checkApiKey()) return;
+    if (!checkApiKey()) return;
 
-            const editInstruction = editInstructionInput.value.trim();
-            if (!editInstruction) {
-                showNotification('تنبيه', 'يرجى كتابة التعديل المراد تطبيقه على الشعار.', 'error');
-                return;
-            }
-            if (!currentImageBase64) {
-                showNotification('عذراً', 'لا توجد صورة شعار حالية لتعديلها. يرجى توليد شعار أولاً.', 'error');
-                return;
-            }
+    const editInstruction = editInstructionInput.value.trim();
+    if (!editInstruction) {
+        showNotification('تنبيه', 'يرجى كتابة التعديل المراد تطبيقه.', 'error');
+        return;
+    }
 
-            applyEditBtn.disabled = true;
-            applyEditLoader.classList.remove('hidden');
-            applyEditBtnText.textContent = "جاري التحديث...";
-            imageStatusText.textContent = "جاري تعديل تفاصيل الشعار بالذكاء الاصطناعي المعزز...";
+    applyEditBtn.disabled = true;
+    applyEditLoader.classList.remove('hidden');
+    applyEditBtnText.textContent = "جاري التحديث...";
+    imageStatusText.textContent = "جاري دمج التعديل وتوليد الشعار المحدث عبر Imagen 3...";
 
-            const rawBase64 = currentImageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
-
-            // Attempt 1: Gemini multimodal image modification
-            let success = false;
-            try {
-                const payload = {
-                    contents: [{
-                        parts: [
-                            { text: `Modify the provided logo image strictly according to this instruction: "${editInstruction}". Keep the core graphic elements high quality and clean. Output ONLY the resulting image.` },
-                            {
-                                inlineData: {
-                                    mimeType: "image/png",
-                                    data: rawBase64
-                                }
-                            }
-                        ]
-                    }],
-                    generationConfig: {
-                        responseModalities: ["IMAGE", "TEXT"]
-                    }
-                };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${currentApiKey}`;
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                const parts = result.candidates?.[0]?.content?.parts || [];
-                const imgPart = parts.find(p => p.inlineData || p.inline_data);
-                const returnedBase64 = imgPart?.inlineData?.data || imgPart?.inline_data?.data;
-
-                if (returnedBase64) {
-                    currentImageBase64 = returnedBase64;
-                    const mime = imgPart?.inlineData?.mimeType || imgPart?.inline_data?.mimeType || 'image/png';
-                    const finalImageSrc = `data:${mime};base64,${currentImageBase64}`;
-                    generatedImage.src = finalImageSrc;
-                    downloadBtn.href = finalImageSrc;
-                    success = true;
-                }
-            } catch (e) {
-                console.warn('Multimodal edit failed, falling back to prompt synthesis edit...', e);
-            }
-
-            // Fallback: Re-synthesize using image cascade with edit context
-            if (!success) {
-                try {
-                    const originalPrompt = finalPromptDisplay.textContent.startsWith('سيظهر') ? promptInput.value : finalPromptDisplay.textContent;
-                    const combinedPrompt = `${originalPrompt}. Applied modification: ${editInstruction}. Maintain clean professional vector logo quality.`;
-                    const { base64, mime } = await callImageGenerationApi(combinedPrompt);
-                    currentImageBase64 = base64;
-                    const finalImageSrc = `data:${mime};base64,${currentImageBase64}`;
-                    generatedImage.src = finalImageSrc;
-                    downloadBtn.href = finalImageSrc;
-                    success = true;
-                } catch (fallbackErr) {
-                    console.error('Fallback edit failed:', fallbackErr);
-                }
-            }
-
-            if (success) {
-                imageStatusText.textContent = "تم تعديل الشعار وتحديث التصميم!";
-                finalPromptDisplay.textContent = editInstruction;
-                finalPromptDisplay.classList.add('bg-teal-900/20', 'border-teal-800/50');
-                
-                // Save to history on successful edit
-                const finalImageSrc = generatedImage.src;
-                saveToHistory(`تعديل: ${editInstruction}`, finalImageSrc);
-                
-                showNotification('تم التعديل بنجاح!', 'تم تحديث الشعار بناءً على رغبتك بدقة.', 'success');
-                editInstructionInput.value = "";
-            } else {
-                imageStatusText.textContent = "فشل تعديل الشعار الحالي.";
-                showNotification('فشل التعديل الذكي', 'تعذر تطبيق التعديل على الشعار الحالي. يرجى إعادة المحاولة.', 'error');
-            }
-
-            applyEditBtn.disabled = false;
-            applyEditLoader.classList.add('hidden');
-            applyEditBtnText.textContent = "تعديل";
-        });
+    try {
+        const translatedEdit = await translateToArabicToEnglish(editInstruction);
+        const originalPrompt = finalPromptDisplay.textContent.startsWith('سيظهر') ? promptInput.value : finalPromptDisplay.textContent;
+        
+        // إعادة صياغة البرومبت للحفاظ على الهوية مع تطبيق التعديل
+        const combinedPrompt = `${originalPrompt}. Applied modification explicitly: ${translatedEdit}. Maintain the exact same high-end professional vector logo style.`;
+        
+        const { base64, mime } = await callImageGenerationApi(combinedPrompt);
+        
+        currentImageBase64 = base64;
+        const finalImageSrc = `data:${mime};base64,${currentImageBase64}`;
+        generatedImage.src = finalImageSrc;
+        downloadBtn.href = finalImageSrc;
+        
+        imageStatusText.textContent = "تم تحديث الشعار بنجاح!";
+        finalPromptDisplay.textContent = combinedPrompt;
+        finalPromptDisplay.classList.add('bg-teal-900/20', 'border-teal-800/50');
+        
+        saveToHistory(`تعديل: ${editInstruction}`, finalImageSrc);
+        showNotification('تم التعديل بنجاح!', 'تم تحديث الشعار بناءً على رغبتك باستخدام نماذج جوجل.', 'success');
+        editInstructionInput.value = "";
+    } catch (err) {
+        imageStatusText.textContent = "فشل تعديل الشعار الحالي.";
+        showNotification('خطأ', err.message, 'error');
+    } finally {
+        applyEditBtn.disabled = false;
+        applyEditLoader.classList.add('hidden');
+        applyEditBtnText.textContent = "تعديل";
+    }
+});
     </script>
 </body>
 </html>
