@@ -558,90 +558,90 @@
             }
         });
 
-        generateSlogansBtn.addEventListener('click', async () => {
-            if (!checkApiKey()) return;
+       generateSlogansBtn.addEventListener('click', async () => {
+    if (!checkApiKey()) return;
 
-            const baseIdea = promptInput.value.trim();
-            if (!baseIdea) {
-                showNotification('تنبيه', 'يرجى وصف فكرة الشعار أولاً لتوليد شعارات لفظية مستوحاة منها.', 'error');
-                return;
-            }
+    const baseIdea = promptInput.value.trim();
+    if (!baseIdea) {
+        showNotification('تنبيه', 'يرجى وصف فكرة الشعار أولاً لتوليد شعارات لفظية مستوحاة منها.', 'error');
+        return;
+    }
 
-            generateSlogansBtn.disabled = true;
-            slogansBtnLoader.classList.remove('hidden');
-            slogansBtnText.textContent = "جاري ابتكار الشعارات...";
+    generateSlogansBtn.disabled = true;
+    slogansBtnLoader.classList.remove('hidden');
+    slogansBtnText.textContent = "جاري ابتكار الشعارات...";
 
-            const promptMessage = `Based on this visual description for a logo and brand identity: "${baseIdea}". Generate exactly 5 short, catchy, and creative business slogans/taglines that perfectly reflect the core visual concept. Provide both an Arabic and an English translation for each slogan. Output only as a neat numbered list.`;
+    const promptMessage = `Based on this visual description for a logo and brand identity: "${baseIdea}". Generate exactly 5 short, catchy, and creative business slogans/taglines that perfectly reflect the core visual concept. Provide both an Arabic and an English translation for each slogan. Output only as a neat numbered list.`;
 
-            const payload = {
-                contents: [{ parts: [{ text: promptMessage }] }]
-            };
-            // Use stable 1.5-flash for text to avoid aggressive rate limits on preview models
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentApiKey}`;
+    const payload = {
+        contents: [{ parts: [{ text: promptMessage }] }]
+    };
+    // تم التحديث إلى gemini-2.0-flash لحل مشكلة 404
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${currentApiKey}`;
 
-            try {
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                const textOutput = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (textOutput) {
-                    const lines = textOutput.split('\n').filter(line => line.trim() !== '');
-                    slogansOutputList.innerHTML = '';
-                    
-                    lines.forEach(line => {
-                        const div = document.createElement('div');
-                        div.className = "p-3 bg-slate-900 border border-slate-800/80 rounded-xl text-xs text-slate-300 hover:border-cyan-500/40 cursor-pointer transition-all duration-150 flex items-start gap-2.5 leading-relaxed";
-                        div.innerHTML = `
-                            <span class="text-cyan-400 mt-1">•</span>
-                            <span class="flex-1">${line}</span>
-                        `;
-                        div.addEventListener('click', () => {
-                            const cleanSlogan = line.replace(/^\d+[\.\s\-]+/, '');
-                            promptInput.value = promptInput.value + ` يتضمن الشعار أو الهوية الفلسفة المستوحاة من: "${cleanSlogan}"`;
-                            showNotification('تم الاختيار!', 'تم إضافة الشعار اللفظي المختار إلى الوصف الأساسي.', 'success');
-                        });
-                        slogansOutputList.appendChild(div);
-                    });
-                    
-                    slogansOutputList.classList.remove('hidden');
-                    showNotification('تم توليد الشعارات!', 'اضغط على أي شعار لإدراجه ضمن فكرة التصميم.', 'success');
-                } else {
-                    throw new Error('لم يتوفر رد صالح من خادم النصوص.');
-                }
-            } catch (err) {
-                console.error(err);
-                showNotification('فشل الابتكار اللفظي', err.message, 'error');
-            } finally {
-                generateSlogansBtn.disabled = false;
-                slogansBtnLoader.classList.add('hidden');
-                slogansBtnText.textContent = "توليد الشعارات المقترحة بـ Gemini";
-            }
+    try {
+        const response = await fetchWithRetry(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
 
-        // Helper Function: ترجمة الوصف العربي إلى برومبت إنجليزي احترافي لضمان دقة المحركات البديلة
-        async function translateToArabicToEnglish(text) {
-            // إذا كان النص يحتوي على أحرف عربية
-            if (/[\u0600-\u06FF]/.test(text)) {
-                try {
-                    const payload = {
-                        contents: [{ parts: [{ text: `Translate the following logo design concept to a precise, descriptive English prompt for an AI image generator (like Midjourney). Output ONLY the English text without any quotes or introductions: ${text}` }] }]
-                    };
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentApiKey}`;
-                    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    const data = await res.json();
-                    const transText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (transText) return transText.trim();
-                } catch (e) {
-                    console.warn("Translation fallback failed", e);
-                }
-            }
-            return text; // إرجاع النص الأصلي في حال فشل الترجمة أو كان إنجليزياً بالفعل
+        const result = await response.json();
+        const textOutput = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (textOutput) {
+            const lines = textOutput.split('\n').filter(line => line.trim() !== '');
+            slogansOutputList.innerHTML = '';
+            
+            lines.forEach(line => {
+                const div = document.createElement('div');
+                div.className = "p-3 bg-slate-900 border border-slate-800/80 rounded-xl text-xs text-slate-300 hover:border-cyan-500/40 cursor-pointer transition-all duration-150 flex items-start gap-2.5 leading-relaxed";
+                div.innerHTML = `
+                    <span class="text-cyan-400 mt-1">•</span>
+                    <span class="flex-1">${line}</span>
+                `;
+                div.addEventListener('click', () => {
+                    const cleanSlogan = line.replace(/^\d+[\.\s\-]+/, '');
+                    promptInput.value = promptInput.value + ` يتضمن الشعار أو الهوية الفلسفة المستوحاة من: "${cleanSlogan}"`;
+                    showNotification('تم الاختيار!', 'تم إضافة الشعار اللفظي المختار إلى الوصف الأساسي.', 'success');
+                });
+                slogansOutputList.appendChild(div);
+            });
+            
+            slogansOutputList.classList.remove('hidden');
+            showNotification('تم توليد الشعارات!', 'اضغط على أي شعار لإدراجه ضمن فكرة التصميم.', 'success');
+        } else {
+            throw new Error('لم يتوفر رد صالح من خادم النصوص.');
         }
+    } catch (err) {
+        console.error(err);
+        showNotification('فشل الابتكار اللفظي', err.message, 'error');
+    } finally {
+        generateSlogansBtn.disabled = false;
+        slogansBtnLoader.classList.add('hidden');
+        slogansBtnText.textContent = "توليد الشعارات المقترحة بـ Gemini";
+    }
+});
+        // Helper Function: ترجمة الوصف العربي إلى برومبت إنجليزي احترافي لضمان دقة المحركات البديلة
+async function translateToArabicToEnglish(text) {
+    // إذا كان النص يحتوي على أحرف عربية
+    if (/[\u0600-\u06FF]/.test(text)) {
+        try {
+            const payload = {
+                contents: [{ parts: [{ text: `Translate the following logo design concept to a precise, descriptive English prompt for an AI image generator (like Midjourney). Output ONLY the English text without any quotes or introductions: ${text}` }] }]
+            };
+            // تم التحديث إلى gemini-2.0-flash لحل مشكلة 404
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${currentApiKey}`;
+            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const data = await res.json();
+            const transText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (transText) return transText.trim();
+        } catch (e) {
+            console.warn("Translation fallback failed", e);
+        }
+    }
+    return text; // إرجاع النص الأصلي في حال فشل الترجمة أو كان إنجليزياً بالفعل
+}
 
         async function callImageGenerationApi(promptText) {
     let lastError = null;
