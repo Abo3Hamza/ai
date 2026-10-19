@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لعبة النجمة السحرية (26)</title>
+    <!-- استدعاء Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- استدعاء React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- استدعاء Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            background-color: #1a120b; 
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            font-family: system-ui, sans-serif; 
+            touch-action: manipulation; 
+            user-select: none;
+        }
+        
+        /* تأثيرات الخشب */
+        .wood-board {
+            background-color: #8b5a2b;
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.5);
+            border: 4px solid #5c3a21;
+        }
+        
+        .hole {
+            background-color: #3e2723;
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.8);
+            border: 1px solid #5c3a21;
+        }
+
+        .card-piece {
+            background-color: #e6c280;
+            background-image: url('https://www.transparenttextures.com/patterns/retina-wood.png');
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.4);
+            border: 2px solid #b08d55;
+            color: #3e2723;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.3);
+            transition: all 0.2s;
+        }
+
+        .card-piece.selected {
+            box-shadow: 0 0 15px 5px rgba(250, 204, 21, 0.6);
+            border-color: #facc15;
+            transform: scale(1.1);
+            z-index: 50;
+        }
+
+        .winning-line {
+            stroke: #22c55e !important;
+            filter: drop-shadow(0 0 8px #22c55e);
+            stroke-width: 1.5 !important;
+            transition: all 0.5s;
+        }
+    </style>
+</head>
+<body class="text-slate-200">
+    <div id="root"></div>
+
+    <script>
+        Babel.registerPreset('react-classic', {
+            presets: [
+                [Babel.availablePresets['react'], { runtime: 'classic' }]
+            ]
+        });
+    </script>
+
+    <script type="text/babel" data-presets="react-classic">
+        const { useState, useEffect } = React;
+
+        // إحداثيات النقاط الـ 12 محسوبة هندسياً بالنسبة المئوية لتكوين نجمة سداسية مثالية
+        const NODES = [
+            { id: 0, x: 50, y: 10 },
+            { id: 1, x: 15.36, y: 30 },
+            { id: 2, x: 38.46, y: 30 },
+            { id: 3, x: 61.54, y: 30 },
+            { id: 4, x: 84.64, y: 30 },
+            { id: 5, x: 26.9, y: 50 },
+            { id: 6, x: 73.1, y: 50 },
+            { id: 7, x: 15.36, y: 70 },
+            { id: 8, x: 38.46, y: 70 },
+            { id: 9, x: 61.54, y: 70 },
+            { id: 10, x: 84.64, y: 70 },
+            { id: 11, x: 50, y: 90 },
+        ];
+
+        // خطوط النجمة (كل خط يحتوي على 4 نقاط)
+        const LINES = [
+            [1, 2, 3, 4],     // الخط الأفقي العلوي
+            [7, 8, 9, 10],    // الخط الأفقي السفلي
+            [0, 2, 5, 7],     // الخط المائل الأيسر
+            [0, 3, 6, 10],    // الخط المائل الأيمن
+            [1, 5, 8, 11],    // الخط المائل السفلي الأيسر
+            [4, 6, 9, 11]     // الخط المائل السفلي الأيمن
+        ];
+
+        function MagicHexagram() {
+            // حالة اللوحة (12 مكان، القيمة الافتراضية فارغة null)
+            const [board, setBoard] = useState(Array(12).fill(null));
+            // الكروت المتبقية في بنك الكروت
+            const [bank, setBank] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+            // الكارت المحدد حالياً
+            const [selected, setSelected] = useState({ type: null, index: null, value: null });
+            // حالة الفوز
+            const [isWin, setIsWin] = useState(false);
+            const [winningLines, setWinningLines] = useState([]);
+
+            // التحقق من الفوز وحساب الخطوط بعد كل حركة
+            useEffect(() => {
+                let winStatus = true;
+                let fullBoard = board.every(val => val !== null);
+                let validLinesCount = 0;
+                let validLinesIndices = [];
+
+                LINES.forEach((line, index) => {
+                    const isLineFull = line.every(idx => board[idx] !== null);
+                    if (isLineFull) {
+                        const sum = line.reduce((acc, idx) => acc + board[idx], 0);
+                        if (sum === 26) {
+                            validLinesCount++;
+                            validLinesIndices.push(index);
+                        } else {
+                            winStatus = false;
+                        }
+                    } else {
+                        winStatus = false;
+                    }
+                });
+
+                setWinningLines(validLinesIndices);
+                if (fullBoard && winStatus) {
+                    setIsWin(true);
+                } else {
+                    setIsWin(false);
+                }
+            }, [board]);
+
+            // التعامل مع النقر على كارت في بنك الكروت
+            const handleBankClick = (val) => {
+                if (isWin) return;
+                
+                if (selected.type === 'board') {
+                    // إرجاع كارت من اللوحة إلى البنك
+                    const newBoard = [...board];
+                    newBoard[selected.index] = null;
+                    setBoard(newBoard);
+                    
+                    const newBank = [...bank, selected.value].sort((a, b) => a - b);
+                    setBank(newBank);
+                    setSelected({ type: null, index: null, value: null });
+                } else if (selected.value === val) {
+                    // إلغاء التحديد
+                    setSelected({ type: null, index: null, value: null });
+                } else {
+                    // تحديد كارت من البنك
+                    setSelected({ type: 'bank', index: null, value: val });
+                }
+            };
+
+            // التعامل مع النقر على حفرة في اللوحة
+            const handleBoardClick = (idx) => {
+                if (isWin) return;
+
+                if (board[idx] !== null) { // إذا كان المكان به كارت
+                    if (selected.type === 'bank') {
+                        // تبديل كارت من البنك مع كارت في اللوحة
+                        const newBank = bank.filter(v => v !== selected.value);
+                        newBank.push(board[idx]);
+                        newBank.sort((a, b) => a - b);
+                        setBank(newBank);
+                        
+                        const newBoard = [...board];
+                        newBoard[idx] = selected.value;
+                        setBoard(newBoard);
+                        setSelected({ type: null, index: null, value: null });
+                    } else if (selected.type === 'board') {
+                        if (selected.index === idx) {
+                            // إلغاء التحديد
+                            setSelected({ type: null, index: null, value: null });
+                        } else {
+                            // التبديل بين كارتين داخل اللوحة
+                            const newBoard = [...board];
+                            const temp = newBoard[idx];
+                            newBoard[idx] = selected.value;
+                            newBoard[selected.index] = temp;
+                            setBoard(newBoard);
+                            setSelected({ type: null, index: null, value: null });
+                        }
+                    } else {
+                        // تحديد الكارت الموجود في اللوحة
+                        setSelected({ type: 'board', index: idx, value: board[idx] });
+                    }
+                } else { // إذا كان المكان فارغاً
+                    if (selected.type === 'bank') {
+                        // نقل الكارت من البنك إلى اللوحة
+                        const newBank = bank.filter(v => v !== selected.value);
+                        setBank(newBank);
+                        
+                        const newBoard = [...board];
+                        newBoard[idx] = selected.value;
+                        setBoard(newBoard);
+                        setSelected({ type: null, index: null, value: null });
+                    } else if (selected.type === 'board') {
+                        // نقل الكارت من مكان لآخر داخل اللوحة
+                        const newBoard = [...board];
+                        newBoard[idx] = selected.value;
+                        newBoard[selected.index] = null;
+                        setBoard(newBoard);
+                        setSelected({ type: null, index: null, value: null });
+                    }
+                }
+            };
+
+            // تفريغ اللوحة بالكامل للبدء من جديد
+            const resetGame = () => {
+                setBoard(Array(12).fill(null));
+                setBank([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+                setSelected({ type: null, index: null, value: null });
+                setIsWin(false);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 pb-12">
+                    
+                    {/* الترويسة والتعليمات */}
+                    <div className="w-full max-w-lg mb-4 text-center mt-4">
+                        <h1 className="text-3xl sm:text-4xl font-black text-amber-500 mb-2 drop-shadow-md">النجمة السحرية</h1>
+                        <p className="text-amber-200/80 text-sm sm:text-base px-4">
+                            الهدف: رتب الكروت الـ 12 بحيث يكون مجموع كل خط من الخطوط الستة <span className="font-bold text-amber-400 text-lg">26</span>
+                        </p>
+                    </div>
+
+                    {/* رسالة الفوز */}
+                    {isWin && (
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-md bg-green-800/95 border-2 border-green-400 p-8 rounded-3xl text-center shadow-[0_0_50px_rgba(34,197,94,0.6)] backdrop-blur-sm animate-bounce">
+                            <h2 className="text-4xl font-black text-white mb-2">أحسنت العبقرية! 🎉</h2>
+                            <p className="text-green-200 text-lg mb-6">لقد تمكنت من حل اللغز الصعب.</p>
+                            <button onClick={resetGame} className="bg-green-500 hover:bg-green-400 text-black font-bold py-3 px-8 rounded-xl shadow-lg transition-transform active:scale-95">
+                                العب مرة أخرى
+                            </button>
+                        </div>
+                    )}
+
+                    {/* لوحة اللعب الخشبية */}
+                    <div className="relative w-full max-w-[500px] aspect-square wood-board rounded-lg mb-8">
+                        
+                        {/* خطوط النجمة (SVG) */}
+                        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none opacity-60">
+                            {/* المثلث المتجه للأعلى */}
+                            <polygon 
+                                points="50,10 15.36,70 84.64,70" 
+                                fill="none" 
+                                stroke="#2c1a0f" 
+                                strokeWidth="0.8" 
+                                strokeLinejoin="round"
+                            />
+                            {/* المثلث المتجه للأسفل */}
+                            <polygon 
+                                points="50,90 84.64,30 15.36,30" 
+                                fill="none" 
+                                stroke="#2c1a0f" 
+                                strokeWidth="0.8" 
+                                strokeLinejoin="round"
+                            />
+
+                            {/* خطوط مضيئة لإظهار الخطوط الصحيحة */}
+                            {winningLines.includes(0) && <line x1="15.36" y1="30" x2="84.64" y2="30" className="winning-line" />}
+                            {winningLines.includes(1) && <line x1="15.36" y1="70" x2="84.64" y2="70" className="winning-line" />}
+                            {winningLines.includes(2) && <line x1="50" y1="10" x2="15.36" y2="70" className="winning-line" />}
+                            {winningLines.includes(3) && <line x1="50" y1="10" x2="84.64" y2="70" className="winning-line" />}
+                            {winningLines.includes(4) && <line x1="50" y1="90" x2="15.36" y2="30" className="winning-line" />}
+                            {winningLines.includes(5) && <line x1="50" y1="90" x2="84.64" y2="30" className="winning-line" />}
+                        </svg>
+
+                        {/* رقم 26 في المنتصف */}
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl sm:text-5xl font-black text-[#3e2723] opacity-80 pointer-events-none" style={{ textShadow: '1px 1px 0px rgba(255,255,255,0.2)'}}>
+                            26
+                        </div>
+
+                        {/* الحفر ووضع الكروت */}
+                        {NODES.map((node) => (
+                            <div 
+                                key={node.id}
+                                onClick={() => handleBoardClick(node.id)}
+                                className="absolute w-[14%] aspect-square rounded-full hole flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
+                                style={{ top: `${node.y}%`, left: `${node.x}%` }}
+                            >
+                                {board[node.id] !== null && (
+                                    <div className={`card-piece w-[95%] h-[95%] rounded-full flex items-center justify-center text-xl sm:text-2xl font-black ${selected.type === 'board' && selected.index === node.id ? 'selected' : ''}`}>
+                                        {board[node.id]}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* بنك الكروت المتبقية */}
+                    <div className="w-full max-w-[500px] wood-board p-4 rounded-xl flex flex-col items-center">
+                        <div className="text-[#e6c280] font-bold mb-3 text-sm tracking-wider">الكروت المتاحة (انقر للتحريك)</div>
+                        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 min-h-[60px]">
+                            {bank.length === 0 ? (
+                                <div className="text-[#3e2723] font-bold opacity-60">تم وضع جميع الكروت</div>
+                            ) : (
+                                bank.map((val) => (
+                                    <div 
+                                        key={val}
+                                        onClick={() => handleBankClick(val)}
+                                        className={`card-piece w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl sm:text-2xl font-black cursor-pointer ${selected.type === 'bank' && selected.value === val ? 'selected' : ''}`}
+                                    >
+                                        {val}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        
+                        <div className="mt-6 flex gap-4 w-full justify-center">
+                            <button onClick={resetGame} className="text-[#e6c280] bg-[#3e2723] hover:bg-[#2c1a0f] px-6 py-2 rounded-lg font-bold text-sm transition-colors border border-[#5c3a21] shadow-inner">
+                                تفريغ اللوحة
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MagicHexagram />);
+    </script>
+</body>
+</html>
